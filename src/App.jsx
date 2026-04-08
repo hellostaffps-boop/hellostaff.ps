@@ -5,6 +5,10 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { LanguageProvider } from '@/hooks/useLanguage';
+import Login from './pages/auth/Login';
+import SignUp from './pages/auth/SignUp';
+import ForgotPassword from './pages/auth/ForgotPassword';
 import PublicLayout from './components/PublicLayout';
 import CandidateLayout from './components/CandidateLayout';
 import EmployerLayout from './components/EmployerLayout';
@@ -26,7 +30,6 @@ import EmployerDashboard from './pages/employer/Dashboard';
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -35,20 +38,20 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
       navigateToLogin();
       return null;
     }
   }
 
-  // Render the main app
   return (
     <Routes>
+      <Route path="/auth/login" element={<Login />} />
+      <Route path="/auth/signup" element={<SignUp />} />
+      <Route path="/auth/forgot-password" element={<ForgotPassword />} />
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/jobs" element={<BrowseJobs />} />
@@ -74,19 +77,19 @@ const AuthenticatedApp = () => {
   );
 };
 
-
 function App() {
-
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
-  )
+    <LanguageProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </LanguageProvider>
+  );
 }
 
 export default App
