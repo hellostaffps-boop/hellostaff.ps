@@ -3,15 +3,17 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { LanguageProvider } from '@/hooks/useLanguage';
+import { FirebaseAuthProvider } from '@/lib/firebaseAuth';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import RoleCompletion from '@/components/RoleCompletion';
 import Login from './pages/auth/Login';
 import SignUp from './pages/auth/SignUp';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import PublicLayout from './components/PublicLayout';
 import CandidateLayout from './components/CandidateLayout';
 import EmployerLayout from './components/EmployerLayout';
+import AdminLayout from './components/AdminLayout';
 import Home from './pages/Home';
 import BrowseJobs from './pages/BrowseJobs';
 import JobDetails from './pages/JobDetails';
@@ -26,32 +28,19 @@ import Applications from './pages/candidate/Applications';
 import CandidateNotifications from './pages/candidate/Notifications';
 import CandidateSettings from './pages/candidate/Settings';
 import EmployerDashboard from './pages/employer/Dashboard';
+import PostJob from './pages/employer/PostJob';
+import ManageJobs from './pages/employer/ManageJobs';
+import EmployerApplications from './pages/employer/EmployerApplications';
+import CompanyProfile from './pages/employer/CompanyProfile';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
-    }
-  }
-
   return (
     <Routes>
       <Route path="/auth/login" element={<Login />} />
       <Route path="/auth/signup" element={<SignUp />} />
       <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+      <Route path="/auth/complete-profile" element={<RoleCompletion />} />
+
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/jobs" element={<BrowseJobs />} />
@@ -59,19 +48,37 @@ const AuthenticatedApp = () => {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
       </Route>
-      <Route path="/candidate" element={<CandidateLayout />}>
-        <Route index element={<CandidateDashboard />} />
-        <Route path="profile" element={<CandidateProfile />} />
-        <Route path="profile/edit" element={<EditProfile />} />
-        <Route path="jobs" element={<CandidateJobs />} />
-        <Route path="saved" element={<SavedJobs />} />
-        <Route path="applications" element={<Applications />} />
-        <Route path="notifications" element={<CandidateNotifications />} />
-        <Route path="settings" element={<CandidateSettings />} />
+
+      {/* Candidate routes */}
+      <Route element={<ProtectedRoute allowedRoles={["candidate"]} />}>
+        <Route path="/candidate" element={<CandidateLayout />}>
+          <Route index element={<CandidateDashboard />} />
+          <Route path="profile" element={<CandidateProfile />} />
+          <Route path="profile/edit" element={<EditProfile />} />
+          <Route path="jobs" element={<CandidateJobs />} />
+          <Route path="saved" element={<SavedJobs />} />
+          <Route path="applications" element={<Applications />} />
+          <Route path="notifications" element={<CandidateNotifications />} />
+          <Route path="settings" element={<CandidateSettings />} />
+        </Route>
       </Route>
-      <Route path="/employer" element={<EmployerLayout />}>
-        <Route index element={<EmployerDashboard />} />
+
+      {/* Employer routes */}
+      <Route element={<ProtectedRoute allowedRoles={["employer_owner", "employer_manager"]} />}>
+        <Route path="/employer" element={<EmployerLayout />}>
+          <Route index element={<EmployerDashboard />} />
+          <Route path="company" element={<CompanyProfile />} />
+          <Route path="post-job" element={<PostJob />} />
+          <Route path="jobs" element={<ManageJobs />} />
+          <Route path="applications" element={<EmployerApplications />} />
+        </Route>
       </Route>
+
+      {/* Admin routes */}
+      <Route element={<ProtectedRoute allowedRoles={["platform_admin"]} />}>
+        <Route path="/admin" element={<AdminLayout />} />
+      </Route>
+
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
@@ -80,14 +87,14 @@ const AuthenticatedApp = () => {
 function App() {
   return (
     <LanguageProvider>
-      <AuthProvider>
+      <FirebaseAuthProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <AuthenticatedApp />
           </Router>
           <Toaster />
         </QueryClientProvider>
-      </AuthProvider>
+      </FirebaseAuthProvider>
     </LanguageProvider>
   );
 }

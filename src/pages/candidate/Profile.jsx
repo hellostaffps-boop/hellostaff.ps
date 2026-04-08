@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { User, MapPin, Phone, Mail, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,9 +6,12 @@ import { Link } from "react-router-dom";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { getCandidateProfile } from "@/lib/firestoreService";
 
 export default function Profile() {
   const { t } = useLanguage();
+  const { firebaseUser } = useFirebaseAuth();
 
   const typeLabels = {
     barista: t("jobCard", "typeBarista"),
@@ -23,12 +25,9 @@ export default function Profile() {
   };
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ["my-profile"],
-    queryFn: async () => {
-      const user = await base44.auth.me();
-      const profiles = await base44.entities.CandidateProfile.filter({ user_email: user.email });
-      return profiles[0] || null;
-    },
+    queryKey: ["my-candidate-profile", firebaseUser?.uid],
+    queryFn: () => getCandidateProfile(firebaseUser.uid),
+    enabled: !!firebaseUser,
   });
 
   if (isLoading) {
@@ -39,17 +38,12 @@ export default function Profile() {
     );
   }
 
-  if (!profile) {
+  if (!profile || !profile.headline) {
     return (
       <div>
         <PageHeader title={t("profile", "title")} />
-        <EmptyState
-          icon={User}
-          title={t("profile", "noProfile")}
-          description={t("profile", "noProfileDesc")}
-          actionLabel={t("profile", "createProfile")}
-          actionPath="/candidate/profile/edit"
-        />
+        <EmptyState icon={User} title={t("profile", "noProfile")} description={t("profile", "noProfileDesc")}
+          actionLabel={t("profile", "createProfile")} actionPath="/candidate/profile/edit" />
       </div>
     );
   }
@@ -72,9 +66,9 @@ export default function Profile() {
           <div>
             <h2 className="text-xl font-bold">{profile.headline || t("profile", "defaultHeadline")}</h2>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
-              {profile.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {profile.location}</span>}
+              {profile.city && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {profile.city}</span>}
               {profile.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {profile.phone}</span>}
-              <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {profile.user_email}</span>
+              <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {firebaseUser?.email}</span>
             </div>
           </div>
         </div>
@@ -86,11 +80,11 @@ export default function Profile() {
           </div>
         )}
 
-        {profile.job_types?.length > 0 && (
+        {profile.preferred_roles?.length > 0 && (
           <div className="mb-8">
             <h3 className="font-semibold text-sm mb-3">{t("profile", "jobCategories")}</h3>
             <div className="flex flex-wrap gap-2">
-              {profile.job_types.map((type) => (
+              {profile.preferred_roles.map((type) => (
                 <Badge key={type} variant="secondary">{typeLabels[type] || type}</Badge>
               ))}
             </div>
@@ -101,18 +95,16 @@ export default function Profile() {
           <div className="mb-8">
             <h3 className="font-semibold text-sm mb-3">{t("profile", "skills")}</h3>
             <div className="flex flex-wrap gap-2">
-              {profile.skills.map((s) => (
-                <Badge key={s} variant="outline">{s}</Badge>
-              ))}
+              {profile.skills.map((s) => <Badge key={s} variant="outline">{s}</Badge>)}
             </div>
           </div>
         )}
 
         <div className="flex gap-8 text-sm">
-          {profile.experience_years != null && (
+          {profile.years_experience != null && (
             <div>
               <div className="text-muted-foreground">{t("profile", "experience")}</div>
-              <div className="font-semibold">{profile.experience_years} {t("profile", "experienceYears")}</div>
+              <div className="font-semibold">{profile.years_experience} {t("profile", "experienceYears")}</div>
             </div>
           )}
           {profile.availability && (
@@ -121,10 +113,6 @@ export default function Profile() {
               <div className="font-semibold">{t("status", profile.availability) || profile.availability}</div>
             </div>
           )}
-          <div>
-            <div className="text-muted-foreground">{t("profile", "status")}</div>
-            <div className="font-semibold">{t("status", profile.status || "active")}</div>
-          </div>
         </div>
       </div>
     </div>

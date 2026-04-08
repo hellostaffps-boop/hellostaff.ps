@@ -1,12 +1,26 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { updateUser } from "@/lib/firestoreService";
+import { toast } from "sonner";
 
 export default function Settings() {
   const { t } = useLanguage();
+  const { firebaseUser, userProfile, logout } = useFirebaseAuth();
+  const [fullName, setFullName] = useState(userProfile?.full_name || firebaseUser?.displayName || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await updateUser(firebaseUser.uid, { full_name: fullName });
+    toast.success(t("common", "save"));
+    setSaving(false);
+  };
 
   return (
     <div>
@@ -18,12 +32,16 @@ export default function Settings() {
           <div className="space-y-4">
             <div>
               <Label className="text-sm">{t("settings", "email")}</Label>
-              <Input disabled placeholder={t("settings", "emailPlaceholder")} className="mt-1.5 bg-secondary/50" />
+              <Input disabled value={firebaseUser?.email || ""} className="mt-1.5 bg-secondary/50" />
             </div>
             <div>
               <Label className="text-sm">{t("settings", "fullName")}</Label>
-              <Input placeholder={t("settings", "fullNamePlaceholder")} className="mt-1.5" />
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)}
+                placeholder={t("settings", "fullNamePlaceholder")} className="mt-1.5" />
             </div>
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? t("common", "loading") : t("common", "save")}
+            </Button>
           </div>
         </div>
 
@@ -57,7 +75,7 @@ export default function Settings() {
         <div className="bg-white rounded-2xl border border-destructive/20 p-6">
           <h2 className="font-semibold text-base mb-2 text-destructive">{t("settings", "dangerZone")}</h2>
           <p className="text-xs text-muted-foreground mb-4">{t("settings", "dangerZoneDesc")}</p>
-          <Button variant="destructive" size="sm">{t("settings", "deleteAccount")}</Button>
+          <Button variant="destructive" size="sm" onClick={logout}>{t("auth", "signOut") || t("settings", "deleteAccount")}</Button>
         </div>
       </div>
     </div>

@@ -6,22 +6,33 @@ import { Label } from "@/components/ui/label";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useFirebaseAuth } from "@/lib/firebaseAuth";
 
 export default function ForgotPassword() {
   const { t, isRTL } = useLanguage();
+  const { resetPassword } = useFirebaseAuth();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (email) setSent(true);
+    if (!email) return;
+    setError("");
+    setLoading(true);
+    try {
+      await resetPassword(email);
+      setSent(true);
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-secondary/30">
-      <div className="absolute top-4 end-4">
-        <LanguageSwitcher />
-      </div>
+      <div className="absolute top-4 end-4"><LanguageSwitcher /></div>
 
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl border border-border p-8 sm:p-10 shadow-sm">
@@ -53,26 +64,19 @@ export default function ForgotPassword() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <Label className="text-sm font-medium">{t("auth", "email")}</Label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t("auth", "emailPlaceholder")}
-                  className="mt-1.5 h-11"
-                  required
-                />
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("auth", "emailPlaceholder")} className="mt-1.5 h-11" required />
               </div>
-              <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90">
-                {t("auth", "sendResetLink")}
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90" disabled={loading}>
+                {loading ? t("common", "loading") : t("auth", "sendResetLink")}
               </Button>
             </form>
           )}
 
           <div className="mt-6 text-center">
-            <Link
-              to="/auth/login"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <Link to="/auth/login"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               {isRTL ? null : <ArrowLeft className="w-3.5 h-3.5" />}
               {t("auth", "backToSignIn")}
               {isRTL ? <ArrowLeft className="w-3.5 h-3.5 rotate-180" /> : null}

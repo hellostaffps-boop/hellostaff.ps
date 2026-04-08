@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import JobCard from "../components/JobCard";
 import EmptyState from "../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
+import { getPublishedJobs } from "@/lib/firestoreService";
 
 export default function BrowseJobs() {
   const { t } = useLanguage();
@@ -27,13 +27,15 @@ export default function BrowseJobs() {
   ];
 
   const { data: jobs = [], isLoading } = useQuery({
-    queryKey: ["jobs", "published"],
-    queryFn: () => base44.entities.Job.filter({ status: "published" }, "-created_date"),
+    queryKey: ["published-jobs"],
+    queryFn: getPublishedJobs,
   });
 
   const filtered = jobs.filter((job) => {
-    const matchSearch = !search || job.title?.toLowerCase().includes(search.toLowerCase()) || job.organization_name?.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = category === "all" || job.job_type === category;
+    const matchSearch = !search ||
+      job.title?.toLowerCase().includes(search.toLowerCase()) ||
+      job.organization_name?.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = category === "all" || job.category === category;
     return matchSearch && matchCategory;
   });
 
@@ -47,21 +49,13 @@ export default function BrowseJobs() {
       <div className="flex flex-col sm:flex-row gap-3 mb-8">
         <div className="relative flex-1">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder={t("browseJobs", "searchPlaceholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="ps-10 h-11"
-          />
+          <Input placeholder={t("browseJobs", "searchPlaceholder")} value={search}
+            onChange={(e) => setSearch(e.target.value)} className="ps-10 h-11" />
         </div>
         <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-full sm:w-48 h-11">
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48 h-11"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {jobTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-            ))}
+            {jobTypes.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
           </SelectContent>
         </Select>
         <Button variant="outline" size="icon" className="h-11 w-11 sm:flex hidden">
@@ -74,11 +68,7 @@ export default function BrowseJobs() {
           <div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title={t("browseJobs", "noJobsFound")}
-          description={t("browseJobs", "noJobsFoundDesc")}
-        />
+        <EmptyState icon={Search} title={t("browseJobs", "noJobsFound")} description={t("browseJobs", "noJobsFoundDesc")} />
       ) : (
         <div className="grid gap-4">
           {filtered.map((job) => <JobCard key={job.id} job={job} showSave />)}

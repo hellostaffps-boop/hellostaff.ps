@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,24 +10,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { getCandidateProfile, saveCandidateProfile } from "@/lib/firestoreService";
 
 export default function EditProfile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t } = useLanguage();
+  const { firebaseUser } = useFirebaseAuth();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    headline: "", bio: "", phone: "", location: "",
-    job_types: [], experience_years: "", availability: "flexible", skills: "",
+    headline: "", bio: "", phone: "", city: "",
+    preferred_roles: [], years_experience: "", availability: "flexible", skills: "",
   });
 
   const { data: existing } = useQuery({
-    queryKey: ["my-profile-edit"],
-    queryFn: async () => {
-      const user = await base44.auth.me();
-      const profiles = await base44.entities.CandidateProfile.filter({ user_email: user.email });
-      return profiles[0] || null;
-    },
+    queryKey: ["my-candidate-profile", firebaseUser?.uid],
+    queryFn: () => getCandidateProfile(firebaseUser.uid),
+    enabled: !!firebaseUser,
   });
 
   useEffect(() => {
@@ -37,23 +36,14 @@ export default function EditProfile() {
         headline: existing.headline || "",
         bio: existing.bio || "",
         phone: existing.phone || "",
-        location: existing.location || "",
-        job_types: existing.job_types || [],
-        experience_years: existing.experience_years?.toString() || "",
+        city: existing.city || "",
+        preferred_roles: existing.preferred_roles || [],
+        years_experience: existing.years_experience?.toString() || "",
         availability: existing.availability || "flexible",
         skills: existing.skills?.join(", ") || "",
       });
     }
   }, [existing]);
-
-  const toggleJobType = (value) => {
-    setForm((prev) => ({
-      ...prev,
-      job_types: prev.job_types.includes(value)
-        ? prev.job_types.filter((jt) => jt !== value)
-        : [...prev.job_types, value],
-    }));
-  };
 
   const jobTypeOptions = [
     { value: "barista", label: t("jobCard", "typeBarista") },
@@ -66,22 +56,25 @@ export default function EditProfile() {
     { value: "restaurant_manager", label: t("jobCard", "typeManager") },
   ];
 
+  const toggleRole = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      preferred_roles: prev.preferred_roles.includes(value)
+        ? prev.preferred_roles.filter((r) => r !== value)
+        : [...prev.preferred_roles, value],
+    }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
-    const user = await base44.auth.me();
     const data = {
       ...form,
-      user_email: user.email,
-      experience_years: form.experience_years ? Number(form.experience_years) : undefined,
+      user_id: firebaseUser.uid,
+      years_experience: form.years_experience ? Number(form.years_experience) : 0,
       skills: form.skills ? form.skills.split(",").map((s) => s.trim()).filter(Boolean) : [],
     };
-
-    if (existing) {
-      await base44.entities.CandidateProfile.update(existing.id, data);
-    } else {
-      await base44.entities.CandidateProfile.create(data);
-    }
-    queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+    await saveCandidateProfile(firebaseUser.uid, data);
+    queryClient.invalidateQueries({ queryKey: ["my-candidate-profile"] });
     toast.success(t("editProfile", "saveSuccess"));
     setSaving(false);
     navigate("/candidate/profile");
@@ -98,56 +91,34 @@ export default function EditProfile() {
         <div className="space-y-6">
           <div>
             <Label className="text-sm">{t("editProfile", "headline")}</Label>
-            <Input
-              placeholder={t("editProfile", "headlinePlaceholder")}
-              value={form.headline}
-              onChange={(e) => setForm({ ...form, headline: e.target.value })}
-              className="mt-1.5"
-            />
+            <Input placeholder={t("editProfile", "headlinePlaceholder")} value={form.headline}
+              onChange={(e) => setForm({ ...form, headline: e.target.value })} className="mt-1.5" />
           </div>
 
           <div>
             <Label className="text-sm">{t("editProfile", "aboutMe")}</Label>
-            <Textarea
-              placeholder={t("editProfile", "aboutMePlaceholder")}
-              value={form.bio}
-              onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              rows={4}
-              className="mt-1.5 resize-none"
-            />
+            <Textarea placeholder={t("editProfile", "aboutMePlaceholder")} value={form.bio}
+              onChange={(e) => setForm({ ...form, bio: e.target.value })} rows={4} className="mt-1.5 resize-none" />
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-sm">{t("editProfile", "phone")}</Label>
-              <Input
-                placeholder={t("editProfile", "phonePlaceholder")}
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="mt-1.5"
-              />
+              <Input placeholder={t("editProfile", "phonePlaceholder")} value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1.5" />
             </div>
             <div>
               <Label className="text-sm">{t("editProfile", "location")}</Label>
-              <Input
-                placeholder={t("editProfile", "locationPlaceholder")}
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                className="mt-1.5"
-              />
+              <Input placeholder={t("editProfile", "locationPlaceholder")} value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })} className="mt-1.5" />
             </div>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-sm">{t("editProfile", "yearsExp")}</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={form.experience_years}
-                onChange={(e) => setForm({ ...form, experience_years: e.target.value })}
-                className="mt-1.5"
-              />
+              <Input type="number" placeholder="0" value={form.years_experience}
+                onChange={(e) => setForm({ ...form, years_experience: e.target.value })} className="mt-1.5" />
             </div>
             <div>
               <Label className="text-sm">{t("editProfile", "availability")}</Label>
@@ -168,10 +139,8 @@ export default function EditProfile() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {jobTypeOptions.map((jt) => (
                 <label key={jt.value} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={form.job_types.includes(jt.value)}
-                    onCheckedChange={() => toggleJobType(jt.value)}
-                  />
+                  <Checkbox checked={form.preferred_roles.includes(jt.value)}
+                    onCheckedChange={() => toggleRole(jt.value)} />
                   <span className="text-sm">{jt.label}</span>
                 </label>
               ))}
@@ -180,12 +149,8 @@ export default function EditProfile() {
 
           <div>
             <Label className="text-sm">{t("editProfile", "skills")}</Label>
-            <Input
-              placeholder={t("editProfile", "skillsPlaceholder")}
-              value={form.skills}
-              onChange={(e) => setForm({ ...form, skills: e.target.value })}
-              className="mt-1.5"
-            />
+            <Input placeholder={t("editProfile", "skillsPlaceholder")} value={form.skills}
+              onChange={(e) => setForm({ ...form, skills: e.target.value })} className="mt-1.5" />
             <p className="text-xs text-muted-foreground mt-1">{t("editProfile", "skillsHint")}</p>
           </div>
 

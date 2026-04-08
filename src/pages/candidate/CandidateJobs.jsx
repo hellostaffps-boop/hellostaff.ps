@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +7,7 @@ import JobCard from "../../components/JobCard";
 import EmptyState from "../../components/EmptyState";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
+import { getPublishedJobs } from "@/lib/firestoreService";
 
 export default function CandidateJobs() {
   const { t } = useLanguage();
@@ -27,13 +27,13 @@ export default function CandidateJobs() {
   ];
 
   const { data: jobs = [], isLoading } = useQuery({
-    queryKey: ["candidate-jobs"],
-    queryFn: () => base44.entities.Job.filter({ status: "published" }, "-created_date"),
+    queryKey: ["published-jobs"],
+    queryFn: getPublishedJobs,
   });
 
   const filtered = jobs.filter((job) => {
     const matchSearch = !search || job.title?.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = category === "all" || job.job_type === category;
+    const matchCategory = category === "all" || job.category === category;
     return matchSearch && matchCategory;
   });
 
@@ -44,12 +44,8 @@ export default function CandidateJobs() {
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder={t("candidateJobs", "searchPlaceholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="ps-10"
-          />
+          <Input placeholder={t("candidateJobs", "searchPlaceholder")} value={search}
+            onChange={(e) => setSearch(e.target.value)} className="ps-10" />
         </div>
         <Select value={category} onValueChange={setCategory}>
           <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
@@ -64,11 +60,7 @@ export default function CandidateJobs() {
           <div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title={t("candidateJobs", "noJobsFound")}
-          description={t("candidateJobs", "noJobsFoundDesc")}
-        />
+        <EmptyState icon={Search} title={t("candidateJobs", "noJobsFound")} description={t("candidateJobs", "noJobsFoundDesc")} />
       ) : (
         <div className="grid gap-4">{filtered.map((j) => <JobCard key={j.id} job={j} showSave />)}</div>
       )}
