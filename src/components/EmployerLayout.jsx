@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { useState } from "react";
 import AppSidebar from "./AppSidebar";
 import AppTopbar from "./AppTopbar";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   LayoutDashboard,
   Building2,
@@ -13,19 +14,20 @@ import {
   Settings,
 } from "lucide-react";
 
-const links = [
-  { label: "Dashboard", path: "/employer/dashboard", icon: LayoutDashboard },
-  { label: "Company Profile", path: "/employer/company", icon: Building2 },
-  { label: "Post a Job", path: "/employer/post-job", icon: PlusCircle },
-  { label: "Manage Jobs", path: "/employer/jobs", icon: Briefcase },
-  { label: "Applications", path: "/employer/applications", icon: FileText },
-  { label: "Team Members", path: "/employer/team", icon: Users },
-  { label: "Notifications", path: "/employer/notifications", icon: Bell },
-  { label: "Settings", path: "/employer/settings", icon: Settings },
-];
-
 export default function EmployerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t } = useLanguage();
+
+  const links = [
+    { label: t("dashboard", "employerTitle"), path: "/employer", icon: LayoutDashboard },
+    { label: t("dashboard", "companyProfile"), path: "/employer/company", icon: Building2 },
+    { label: t("dashboard", "postJob"), path: "/employer/post-job", icon: PlusCircle },
+    { label: t("dashboard", "manageJobs"), path: "/employer/jobs", icon: Briefcase },
+    { label: t("dashboard", "applications"), path: "/employer/applications", icon: FileText },
+    { label: t("dashboard", "team"), path: "/employer/team", icon: Users },
+    { label: t("dashboard", "notifications"), path: "/employer/notifications", icon: Bell },
+    { label: t("dashboard", "settings"), path: "/employer/settings", icon: Settings },
+  ];
 
   return (
     <div className="min-h-screen flex bg-background">

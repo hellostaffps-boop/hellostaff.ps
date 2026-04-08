@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { useState } from "react";
 import AppSidebar from "./AppSidebar";
 import AppTopbar from "./AppTopbar";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   LayoutDashboard,
   User,
@@ -12,18 +13,19 @@ import {
   Settings,
 } from "lucide-react";
 
-const links = [
-  { label: "Dashboard", path: "/candidate/dashboard", icon: LayoutDashboard },
-  { label: "My Profile", path: "/candidate/profile", icon: User },
-  { label: "Browse Jobs", path: "/candidate/jobs", icon: Search },
-  { label: "Saved Jobs", path: "/candidate/saved-jobs", icon: Bookmark },
-  { label: "Applications", path: "/candidate/applications", icon: FileText },
-  { label: "Notifications", path: "/candidate/notifications", icon: Bell },
-  { label: "Settings", path: "/candidate/settings", icon: Settings },
-];
-
 export default function CandidateLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t } = useLanguage();
+
+  const links = [
+    { label: t("dashboard", "candidateTitle"), path: "/candidate", icon: LayoutDashboard },
+    { label: t("dashboard", "myProfile"), path: "/candidate/profile", icon: User },
+    { label: t("dashboard", "browseJobs"), path: "/candidate/jobs", icon: Search },
+    { label: t("dashboard", "savedJobs"), path: "/candidate/saved", icon: Bookmark },
+    { label: t("dashboard", "applications"), path: "/candidate/applications", icon: FileText },
+    { label: t("dashboard", "notifications"), path: "/candidate/notifications", icon: Bell },
+    { label: t("dashboard", "settings"), path: "/candidate/settings", icon: Settings },
+  ];
 
   return (
     <div className="min-h-screen flex bg-background">

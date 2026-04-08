@@ -2,15 +2,18 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useLanguage } from "@/hooks/useLanguage";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function PublicNav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { t } = useLanguage();
 
   const links = [
-    { label: "Browse Jobs", path: "/jobs" },
-    { label: "About", path: "/about" },
-    { label: "Contact", path: "/contact" },
+    { label: t("nav", "browseJobs"), path: "/jobs" },
+    { label: t("nav", "about"), path: "/about" },
+    { label: t("nav", "contact"), path: "/contact" },
   ];
 
   return (
@@ -43,12 +46,13 @@ export default function PublicNav() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/candidate/dashboard">
-              <Button variant="ghost" size="sm">Sign In</Button>
+            <LanguageSwitcher />
+            <Link to="/auth/login">
+              <Button variant="ghost" size="sm">{t("nav", "signIn")}</Button>
             </Link>
-            <Link to="/employer/dashboard">
+            <Link to="/auth/signup">
               <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                Post a Job
+                {t("nav", "postJob")}
               </Button>
             </Link>
           </div>
@@ -76,12 +80,13 @@ export default function PublicNav() {
               </Link>
             ))}
             <div className="pt-3 border-t border-border flex flex-col gap-2">
-              <Link to="/candidate/dashboard" onClick={() => setOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full">Sign In</Button>
+              <div className="flex justify-center pb-1"><LanguageSwitcher /></div>
+              <Link to="/auth/login" onClick={() => setOpen(false)}>
+                <Button variant="outline" size="sm" className="w-full">{t("nav", "signIn")}</Button>
               </Link>
-              <Link to="/employer/dashboard" onClick={() => setOpen(false)}>
+              <Link to="/auth/signup" onClick={() => setOpen(false)}>
                 <Button size="sm" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                  Post a Job
+                  {t("nav", "postJob")}
                 </Button>
               </Link>
             </div>

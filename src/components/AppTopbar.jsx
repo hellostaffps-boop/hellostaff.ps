@@ -1,6 +1,7 @@
 import { Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function AppTopbar({ onMenuClick, notificationsPath }) {
   return (
@@ -15,6 +16,7 @@ export default function AppTopbar({ onMenuClick, notificationsPath }) {
       <div className="flex-1" />
 
       <div className="flex items-center gap-2">
+        <LanguageSwitcher compact />
         {notificationsPath && (
           <Link to={notificationsPath}>
             <Button variant="ghost" size="icon" className="relative">

@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { useState } from "react";
 import AppSidebar from "./AppSidebar";
 import AppTopbar from "./AppTopbar";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   LayoutDashboard,
   Users,
@@ -12,18 +13,19 @@ import {
   Settings,
 } from "lucide-react";
 
-const links = [
-  { label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
-  { label: "Users", path: "/admin/users", icon: Users },
-  { label: "Organizations", path: "/admin/organizations", icon: Building2 },
-  { label: "Jobs", path: "/admin/jobs", icon: Briefcase },
-  { label: "Applications", path: "/admin/applications", icon: FileText },
-  { label: "Reports", path: "/admin/reports", icon: BarChart3 },
-  { label: "Settings", path: "/admin/settings", icon: Settings },
-];
-
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t } = useLanguage();
+
+  const links = [
+    { label: t("dashboard", "adminTitle"), path: "/admin", icon: LayoutDashboard },
+    { label: t("dashboard", "users"), path: "/admin/users", icon: Users },
+    { label: t("dashboard", "organizations"), path: "/admin/organizations", icon: Building2 },
+    { label: t("dashboard", "jobs"), path: "/admin/jobs", icon: Briefcase },
+    { label: t("dashboard", "applications"), path: "/admin/applications", icon: FileText },
+    { label: t("dashboard", "reports"), path: "/admin/reports", icon: BarChart3 },
+    { label: t("dashboard", "settings"), path: "/admin/settings", icon: Settings },
+  ];
 
   return (
     <div className="min-h-screen flex bg-background">
