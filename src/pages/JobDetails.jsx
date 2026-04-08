@@ -1,17 +1,25 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { MapPin, Clock, DollarSign, Building2, Briefcase, ArrowLeft } from "lucide-react";
+import { MapPin, Clock, DollarSign, Briefcase, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-const typeLabels = {
-  barista: "Barista", chef: "Chef", waiter: "Waiter", cashier: "Cashier",
-  host: "Host", cleaner: "Cleaner", kitchen_helper: "Kitchen Helper", restaurant_manager: "Manager",
-};
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function JobDetails() {
   const { id } = useParams();
+  const { t } = useLanguage();
+
+  const typeLabels = {
+    barista: t("jobCard", "typeBarista"),
+    chef: t("jobCard", "typeChef"),
+    waiter: t("jobCard", "typeWaiter"),
+    cashier: t("jobCard", "typeCashier"),
+    host: t("jobCard", "typeHost"),
+    cleaner: t("jobCard", "typeCleaner"),
+    kitchen_helper: t("jobCard", "typeKitchenHelper"),
+    restaurant_manager: t("jobCard", "typeManager"),
+  };
 
   const { data: job, isLoading } = useQuery({
     queryKey: ["job", id],
@@ -33,9 +41,9 @@ export default function JobDetails() {
   if (!job) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-xl font-semibold mb-2">Job not found</h2>
-        <p className="text-muted-foreground mb-6">This job may have been removed or doesn't exist.</p>
-        <Link to="/jobs"><Button variant="outline">Browse Jobs</Button></Link>
+        <h2 className="text-xl font-semibold mb-2">{t("jobDetails", "notFound")}</h2>
+        <p className="text-muted-foreground mb-6">{t("jobDetails", "notFoundDesc")}</p>
+        <Link to="/jobs"><Button variant="outline">{t("jobDetails", "browseJobs")}</Button></Link>
       </div>
     );
   }
@@ -43,7 +51,7 @@ export default function JobDetails() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <Link to="/jobs" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
-        <ArrowLeft className="w-4 h-4" /> Back to jobs
+        <ArrowLeft className="w-4 h-4" /> {t("jobDetails", "backToJobs")}
       </Link>
 
       <div className="bg-white rounded-2xl border border-border p-8">
@@ -55,10 +63,10 @@ export default function JobDetails() {
               <Badge className="bg-green-50 text-green-700 border-green-200">{job.status}</Badge>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">{job.title}</h1>
-            <p className="text-muted-foreground mt-1">{job.organization_name || "Company"}</p>
+            <p className="text-muted-foreground mt-1">{job.organization_name || t("common", "company")}</p>
           </div>
           <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">
-            Apply Now
+            {t("jobDetails", "applyNow")}
           </Button>
         </div>
 
@@ -68,31 +76,31 @@ export default function JobDetails() {
           )}
           {job.salary_min && (
             <span className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4" /> {job.salary_min}{job.salary_max ? `–${job.salary_max}` : ""} / {job.salary_period || "month"}
+              <DollarSign className="w-4 h-4" /> {job.salary_min}{job.salary_max ? `–${job.salary_max}` : ""} / {job.salary_period || t("common", "month")}
             </span>
           )}
           {job.experience_required && (
             <span className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> {job.experience_required.replace(/_/g, " ")}</span>
           )}
-          <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> Posted {new Date(job.created_date).toLocaleDateString()}</span>
+          <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> {t("jobDetails", "posted")} {new Date(job.created_date).toLocaleDateString()}</span>
         </div>
 
         <div className="mt-8 space-y-8">
           {job.description && (
             <div>
-              <h2 className="font-semibold text-base mb-3">Job Description</h2>
+              <h2 className="font-semibold text-base mb-3">{t("jobDetails", "jobDescription")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{job.description}</p>
             </div>
           )}
           {job.requirements && (
             <div>
-              <h2 className="font-semibold text-base mb-3">Requirements</h2>
+              <h2 className="font-semibold text-base mb-3">{t("jobDetails", "requirements")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{job.requirements}</p>
             </div>
           )}
           {job.benefits && (
             <div>
-              <h2 className="font-semibold text-base mb-3">Benefits</h2>
+              <h2 className="font-semibold text-base mb-3">{t("jobDetails", "benefits")}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{job.benefits}</p>
             </div>
           )}

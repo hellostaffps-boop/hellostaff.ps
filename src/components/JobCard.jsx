@@ -2,17 +2,29 @@ import { Link } from "react-router-dom";
 import { MapPin, Clock, DollarSign, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-const typeLabels = {
-  barista: "Barista", chef: "Chef", waiter: "Waiter", cashier: "Cashier",
-  host: "Host", cleaner: "Cleaner", kitchen_helper: "Kitchen Helper", restaurant_manager: "Manager",
-};
-
-const employmentLabels = {
-  full_time: "Full-time", part_time: "Part-time", contract: "Contract", temporary: "Temporary",
-};
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function JobCard({ job, showSave, onSave, saved }) {
+  const { t } = useLanguage();
+
+  const typeLabels = {
+    barista: t("jobCard", "typeBarista"),
+    chef: t("jobCard", "typeChef"),
+    waiter: t("jobCard", "typeWaiter"),
+    cashier: t("jobCard", "typeCashier"),
+    host: t("jobCard", "typeHost"),
+    cleaner: t("jobCard", "typeCleaner"),
+    kitchen_helper: t("jobCard", "typeKitchenHelper"),
+    restaurant_manager: t("jobCard", "typeManager"),
+  };
+
+  const employmentLabels = {
+    full_time: t("jobCard", "empFullTime"),
+    part_time: t("jobCard", "empPartTime"),
+    contract: t("jobCard", "empContract"),
+    temporary: t("jobCard", "empTemporary"),
+  };
+
   return (
     <div className="bg-white rounded-xl border border-border p-6 hover:shadow-lg hover:shadow-black/5 transition-all group">
       <div className="flex items-start justify-between gap-4">
@@ -35,7 +47,7 @@ export default function JobCard({ job, showSave, onSave, saved }) {
           </Link>
 
           <p className="text-sm text-muted-foreground mt-1">
-            {job.organization_name || "Company"}
+            {job.organization_name || t("jobCard", "company")}
           </p>
 
           <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-muted-foreground">
@@ -47,7 +59,7 @@ export default function JobCard({ job, showSave, onSave, saved }) {
             {job.salary_min && (
               <span className="flex items-center gap-1">
                 <DollarSign className="w-3.5 h-3.5" />
-                {job.salary_min}{job.salary_max ? `–${job.salary_max}` : ""} / {job.salary_period || "month"}
+                {job.salary_min}{job.salary_max ? `–${job.salary_max}` : ""} / {job.salary_period || t("jobCard", "month")}
               </span>
             )}
             {job.created_date && (
@@ -59,12 +71,7 @@ export default function JobCard({ job, showSave, onSave, saved }) {
         </div>
 
         {showSave && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="flex-shrink-0"
-            onClick={() => onSave && onSave(job.id)}
-          >
+          <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => onSave && onSave(job.id)}>
             <Bookmark className={`w-4 h-4 ${saved ? "fill-accent text-accent" : ""}`} />
           </Button>
         )}

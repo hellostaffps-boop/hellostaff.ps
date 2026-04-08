@@ -1,18 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { User, MapPin, Phone, Mail, Briefcase, Edit } from "lucide-react";
+import { User, MapPin, Phone, Mail, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
-
-const typeLabels = {
-  barista: "Barista", chef: "Chef", waiter: "Waiter", cashier: "Cashier",
-  host: "Host", cleaner: "Cleaner", kitchen_helper: "Kitchen Helper", restaurant_manager: "Manager",
-};
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function Profile() {
+  const { t } = useLanguage();
+
+  const typeLabels = {
+    barista: t("jobCard", "typeBarista"),
+    chef: t("jobCard", "typeChef"),
+    waiter: t("jobCard", "typeWaiter"),
+    cashier: t("jobCard", "typeCashier"),
+    host: t("jobCard", "typeHost"),
+    cleaner: t("jobCard", "typeCleaner"),
+    kitchen_helper: t("jobCard", "typeKitchenHelper"),
+    restaurant_manager: t("jobCard", "typeManager"),
+  };
+
   const { data: profile, isLoading } = useQuery({
     queryKey: ["my-profile"],
     queryFn: async () => {
@@ -33,12 +42,12 @@ export default function Profile() {
   if (!profile) {
     return (
       <div>
-        <PageHeader title="My Profile" />
+        <PageHeader title={t("profile", "title")} />
         <EmptyState
           icon={User}
-          title="No profile yet"
-          description="Create your profile to start applying to jobs and get discovered by employers."
-          actionLabel="Create Profile"
+          title={t("profile", "noProfile")}
+          description={t("profile", "noProfileDesc")}
+          actionLabel={t("profile", "createProfile")}
           actionPath="/candidate/profile/edit"
         />
       </div>
@@ -47,10 +56,10 @@ export default function Profile() {
 
   return (
     <div>
-      <PageHeader title="My Profile">
+      <PageHeader title={t("profile", "title")}>
         <Link to="/candidate/profile/edit">
           <Button size="sm" variant="outline" className="gap-2">
-            <Edit className="w-4 h-4" /> Edit Profile
+            <Edit className="w-4 h-4" /> {t("profile", "editProfile")}
           </Button>
         </Link>
       </PageHeader>
@@ -61,7 +70,7 @@ export default function Profile() {
             <User className="w-8 h-8 text-muted-foreground" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">{profile.headline || "Hospitality Professional"}</h2>
+            <h2 className="text-xl font-bold">{profile.headline || t("profile", "defaultHeadline")}</h2>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
               {profile.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {profile.location}</span>}
               {profile.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {profile.phone}</span>}
@@ -72,17 +81,17 @@ export default function Profile() {
 
         {profile.bio && (
           <div className="mb-8">
-            <h3 className="font-semibold text-sm mb-2">About</h3>
+            <h3 className="font-semibold text-sm mb-2">{t("profile", "about")}</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
           </div>
         )}
 
         {profile.job_types?.length > 0 && (
           <div className="mb-8">
-            <h3 className="font-semibold text-sm mb-3">Job Categories</h3>
+            <h3 className="font-semibold text-sm mb-3">{t("profile", "jobCategories")}</h3>
             <div className="flex flex-wrap gap-2">
-              {profile.job_types.map((t) => (
-                <Badge key={t} variant="secondary">{typeLabels[t] || t}</Badge>
+              {profile.job_types.map((type) => (
+                <Badge key={type} variant="secondary">{typeLabels[type] || type}</Badge>
               ))}
             </div>
           </div>
@@ -90,7 +99,7 @@ export default function Profile() {
 
         {profile.skills?.length > 0 && (
           <div className="mb-8">
-            <h3 className="font-semibold text-sm mb-3">Skills</h3>
+            <h3 className="font-semibold text-sm mb-3">{t("profile", "skills")}</h3>
             <div className="flex flex-wrap gap-2">
               {profile.skills.map((s) => (
                 <Badge key={s} variant="outline">{s}</Badge>
@@ -102,19 +111,19 @@ export default function Profile() {
         <div className="flex gap-8 text-sm">
           {profile.experience_years != null && (
             <div>
-              <div className="text-muted-foreground">Experience</div>
-              <div className="font-semibold">{profile.experience_years} years</div>
+              <div className="text-muted-foreground">{t("profile", "experience")}</div>
+              <div className="font-semibold">{profile.experience_years} {t("profile", "experienceYears")}</div>
             </div>
           )}
           {profile.availability && (
             <div>
-              <div className="text-muted-foreground">Availability</div>
+              <div className="text-muted-foreground">{t("profile", "availability")}</div>
               <div className="font-semibold capitalize">{profile.availability.replace(/_/g, " ")}</div>
             </div>
           )}
           <div>
-            <div className="text-muted-foreground">Status</div>
-            <div className="font-semibold capitalize">{profile.status || "Active"}</div>
+            <div className="text-muted-foreground">{t("profile", "status")}</div>
+            <div className="font-semibold capitalize">{profile.status || "active"}</div>
           </div>
         </div>
       </div>
