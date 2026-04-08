@@ -55,7 +55,7 @@ export default function Dashboard() {
                 <div key={app.id} className="bg-white rounded-xl border border-border p-4">
                   <div className="font-medium text-sm">{app.job_title || t("applications", "job")}</div>
                   <div className="text-xs text-muted-foreground mt-1">{app.organization_name}</div>
-                  <div className="text-xs text-accent font-medium mt-2 capitalize">{app.status}</div>
+                  <div className="text-xs text-accent font-medium mt-2">{t("status", app.status) || app.status}</div>
                 </div>
               ))}
             </div>

@@ -59,7 +59,7 @@ export default function Applications() {
                 </div>
               </div>
               <Badge className={statusColors[app.status] || "bg-secondary"}>
-                {app.status}
+                {t("status", app.status) || app.status}
               </Badge>
             </div>
           ))}

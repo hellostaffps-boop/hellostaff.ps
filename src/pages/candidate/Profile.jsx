@@ -118,12 +118,12 @@ export default function Profile() {
           {profile.availability && (
             <div>
               <div className="text-muted-foreground">{t("profile", "availability")}</div>
-              <div className="font-semibold capitalize">{profile.availability.replace(/_/g, " ")}</div>
+              <div className="font-semibold">{t("status", profile.availability) || profile.availability}</div>
             </div>
           )}
           <div>
             <div className="text-muted-foreground">{t("profile", "status")}</div>
-            <div className="font-semibold capitalize">{profile.status || "active"}</div>
+            <div className="font-semibold">{t("status", profile.status || "active")}</div>
           </div>
         </div>
       </div>

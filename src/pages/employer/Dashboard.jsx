@@ -67,7 +67,7 @@ export default function Dashboard() {
                 <div key={job.id} className="bg-white rounded-xl border border-border p-4 flex items-center justify-between">
                   <div>
                     <div className="font-medium text-sm">{job.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1 capitalize">{job.status} · {job.applications_count || 0} {t("dashboard", "applicationCount")}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{t("status", job.status) || job.status} · {job.applications_count || 0} {t("dashboard", "applicationCount")}</div>
                   </div>
                   <Link to="/employer/jobs" className="text-xs text-accent font-medium hover:underline">{t("common", "view")}</Link>
                 </div>
@@ -90,7 +90,7 @@ export default function Dashboard() {
                 <div key={app.id} className="bg-white rounded-xl border border-border p-4 flex items-center justify-between">
                   <div>
                     <div className="font-medium text-sm">{app.candidate_name || app.candidate_email}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{app.job_title} · {app.status}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{app.job_title} · {t("status", app.status) || app.status}</div>
                   </div>
                   <Link to="/employer/applications" className="text-xs text-accent font-medium hover:underline">{t("dashboard", "review")}</Link>
                 </div>
