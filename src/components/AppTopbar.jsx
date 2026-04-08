@@ -21,7 +21,7 @@ export default function AppTopbar({ onMenuClick, notificationsPath }) {
           <Link to={notificationsPath}>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full" />
+              <span className="absolute top-1.5 end-1.5 w-2 h-2 bg-accent rounded-full" />
             </Button>
           </Link>
         )}

@@ -1,8 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
 import { X } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function AppSidebar({ links, title, open, onClose }) {
   const location = useLocation();
+  const { isRTL } = useLanguage();
 
   return (
     <>
@@ -13,7 +15,7 @@ export default function AppSidebar({ links, title, open, onClose }) {
 
       <aside
         className={`fixed top-0 start-0 z-50 h-full w-64 bg-white border-e border-border flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto ${
-          open ? "translate-x-0" : "-translate-x-full"
+          open ? "translate-x-0" : isRTL ? "translate-x-full" : "-translate-x-full"
         }`}
       >
         <div className="h-16 flex items-center justify-between px-5 border-b border-border">
