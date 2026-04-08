@@ -1,53 +1,39 @@
 import { Star } from "lucide-react";
-
-const testimonials = [
-  {
-    name: "Maria Santos",
-    role: "Barista",
-    text: "Found my dream job at a specialty coffee shop within a week. The process was incredibly smooth.",
-  },
-  {
-    name: "James Chen",
-    role: "Restaurant Owner",
-    text: "Hello Staff has completely changed how we hire. We found three amazing chefs in under two weeks.",
-  },
-  {
-    name: "Sarah Kim",
-    role: "Cafe Manager",
-    text: "The quality of candidates is outstanding. Every hire we've made through Hello Staff has been a great fit.",
-  },
-];
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function Testimonials() {
+  const { t } = useLanguage();
+
+  const testimonials = [
+    { name: t("testimonials", "t1Name"), role: t("testimonials", "t1Role"), text: t("testimonials", "t1Text") },
+    { name: t("testimonials", "t2Name"), role: t("testimonials", "t2Role"), text: t("testimonials", "t2Text") },
+    { name: t("testimonials", "t3Name"), role: t("testimonials", "t3Role"), text: t("testimonials", "t3Text") },
+  ];
+
   return (
     <section className="py-20 sm:py-28 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Loved by teams and talent
+            {t("testimonials", "heading")}
           </h2>
           <p className="mt-4 text-muted-foreground text-lg">
-            Here's what our community has to say about Hello Staff.
+            {t("testimonials", "subtext")}
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {testimonials.map((t) => (
-            <div
-              key={t.name}
-              className="bg-secondary/30 rounded-2xl p-8 border border-border"
-            >
+          {testimonials.map((item, i) => (
+            <div key={i} className="bg-secondary/30 rounded-2xl p-8 border border-border">
               <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-accent text-accent" />
+                {[...Array(5)].map((_, j) => (
+                  <Star key={j} className="w-4 h-4 fill-accent text-accent" />
                 ))}
               </div>
-              <p className="text-sm text-foreground leading-relaxed mb-6">
-                "{t.text}"
-              </p>
+              <p className="text-sm text-foreground leading-relaxed mb-6">"{item.text}"</p>
               <div>
-                <div className="font-semibold text-sm">{t.name}</div>
-                <div className="text-xs text-muted-foreground">{t.role}</div>
+                <div className="font-semibold text-sm">{item.name}</div>
+                <div className="text-xs text-muted-foreground">{item.role}</div>
               </div>
             </div>
           ))}

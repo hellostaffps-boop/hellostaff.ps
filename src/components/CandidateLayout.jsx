@@ -31,7 +31,7 @@ export default function CandidateLayout() {
     <div className="min-h-screen flex bg-background">
       <AppSidebar
         links={links}
-        title="Candidate"
+        title={t("dashboard", "candidateRole")}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

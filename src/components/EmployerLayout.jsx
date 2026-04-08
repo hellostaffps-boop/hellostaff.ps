@@ -33,7 +33,7 @@ export default function EmployerLayout() {
     <div className="min-h-screen flex bg-background">
       <AppSidebar
         links={links}
-        title="Employer"
+        title={t("dashboard", "employerRole")}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

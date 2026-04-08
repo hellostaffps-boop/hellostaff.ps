@@ -31,7 +31,7 @@ export default function AdminLayout() {
     <div className="min-h-screen flex bg-background">
       <AppSidebar
         links={links}
-        title="Admin"
+        title={t("dashboard", "adminRole")}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

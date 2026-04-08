@@ -5,10 +5,8 @@ const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
   const [lang, setLang] = useState(() => {
-    const saved = localStorage.getItem("hs_lang");
-    if (saved) return saved;
-    const browserLang = navigator.language || navigator.userLanguage || "en";
-    return browserLang.startsWith("ar") ? "ar" : "en";
+    // Arabic is the default language
+    return localStorage.getItem("hs_lang") || "ar";
   });
 
   useEffect(() => {
@@ -19,7 +17,7 @@ export function LanguageProvider({ children }) {
   }, [lang]);
 
   const t = (section, key) => {
-    return translations[lang]?.[section]?.[key] || translations["en"]?.[section]?.[key] || key;
+    return translations[lang]?.[section]?.[key] ?? translations["en"]?.[section]?.[key] ?? key;
   };
 
   const toggleLang = () => setLang((prev) => (prev === "en" ? "ar" : "en"));

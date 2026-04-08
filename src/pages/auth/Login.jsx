@@ -30,15 +30,15 @@ export default function Login() {
         </Link>
         <div>
           <blockquote className="text-white/80 text-lg leading-relaxed italic mb-6">
-            "We hired an amazing barista within 48 hours. The platform is incredibly easy to use."
+            "{t("auth", "testimonialQuote")}"
           </blockquote>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
               <span className="text-white text-sm font-semibold">S</span>
             </div>
             <div>
-              <div className="text-white text-sm font-semibold">Sarah Al-Mansouri</div>
-              <div className="text-white/60 text-xs">Café Owner, Dubai</div>
+              <div className="text-white text-sm font-semibold">{t("auth", "testimonialName")}</div>
+              <div className="text-white/60 text-xs">{t("auth", "testimonialRole")}</div>
             </div>
           </div>
         </div>

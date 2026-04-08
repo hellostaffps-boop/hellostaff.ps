@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function PublicFooter() {
+  const { t } = useLanguage();
+
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -13,47 +16,45 @@ export default function PublicFooter() {
               <span className="font-semibold text-lg">Hello Staff</span>
             </div>
             <p className="text-sm text-primary-foreground/60 leading-relaxed">
-              The modern way to hire and get hired in hospitality. Connecting talent with opportunity.
+              {t("footer", "tagline")}
             </p>
           </div>
 
           <div>
-            <h4 className="font-semibold text-sm mb-4">For Workers</h4>
+            <h4 className="font-semibold text-sm mb-4">{t("footer", "forWorkers")}</h4>
             <ul className="space-y-2.5">
-              <li><Link to="/jobs" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Browse Jobs</Link></li>
-              <li><Link to="/about" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">How It Works</Link></li>
-              <li><Link to="/candidate/dashboard" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">My Dashboard</Link></li>
+              <li><Link to="/jobs" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "browseJobs")}</Link></li>
+              <li><Link to="/about" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "howItWorks")}</Link></li>
+              <li><Link to="/candidate" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "myDashboard")}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold text-sm mb-4">For Employers</h4>
+            <h4 className="font-semibold text-sm mb-4">{t("footer", "forEmployers")}</h4>
             <ul className="space-y-2.5">
-              <li><Link to="/employer/post-job" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Post a Job</Link></li>
-              <li><Link to="/employer/dashboard" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Employer Dashboard</Link></li>
-              <li><Link to="/contact" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Contact Sales</Link></li>
+              <li><Link to="/employer/post-job" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "postJob")}</Link></li>
+              <li><Link to="/employer" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "employerDashboard")}</Link></li>
+              <li><Link to="/contact" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "contactSales")}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold text-sm mb-4">Company</h4>
+            <h4 className="font-semibold text-sm mb-4">{t("footer", "company")}</h4>
             <ul className="space-y-2.5">
-              <li><Link to="/about" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">About</Link></li>
-              <li><Link to="/contact" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Contact</Link></li>
-              <li><span className="text-sm text-primary-foreground/60">Privacy Policy</span></li>
-              <li><span className="text-sm text-primary-foreground/60">Terms of Service</span></li>
+              <li><Link to="/about" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "about")}</Link></li>
+              <li><Link to="/contact" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "contact")}</Link></li>
+              <li><span className="text-sm text-primary-foreground/60">{t("footer", "privacy")}</span></li>
+              <li><span className="text-sm text-primary-foreground/60">{t("footer", "terms")}</span></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-primary-foreground/40">
-            © 2026 Hello Staff. All rights reserved.
-          </p>
+          <p className="text-sm text-primary-foreground/40">{t("footer", "copyright")}</p>
           <div className="flex gap-6">
-            <span className="text-sm text-primary-foreground/40">Twitter</span>
-            <span className="text-sm text-primary-foreground/40">LinkedIn</span>
-            <span className="text-sm text-primary-foreground/40">Instagram</span>
+            <span className="text-sm text-primary-foreground/40">{t("footer", "twitter")}</span>
+            <span className="text-sm text-primary-foreground/40">{t("footer", "linkedin")}</span>
+            <span className="text-sm text-primary-foreground/40">{t("footer", "instagram")}</span>
           </div>
         </div>
       </div>

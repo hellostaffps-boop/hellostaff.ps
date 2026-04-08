@@ -1,18 +1,5 @@
 import { Zap, Shield, Clock, Globe, BarChart3, Heart, Users, Briefcase } from "lucide-react";
-
-const workerFeatures = [
-  { icon: Zap, title: "Quick Apply", desc: "Apply to jobs with one click using your saved profile." },
-  { icon: Shield, title: "Verified Employers", desc: "All businesses are verified for your safety and peace of mind." },
-  { icon: Clock, title: "Flexible Scheduling", desc: "Find full-time, part-time, and weekend positions that fit your life." },
-  { icon: Globe, title: "Local Opportunities", desc: "Discover jobs at cafes and restaurants near you." },
-];
-
-const employerFeatures = [
-  { icon: Users, title: "Talent Pool", desc: "Access thousands of pre-screened hospitality professionals." },
-  { icon: Briefcase, title: "Smart Matching", desc: "Our system suggests the best candidates for your roles." },
-  { icon: BarChart3, title: "Hiring Analytics", desc: "Track applications, views, and hiring metrics in real time." },
-  { icon: Heart, title: "Employer Branding", desc: "Showcase your company culture and attract top talent." },
-];
+import { useLanguage } from "@/hooks/useLanguage";
 
 function FeatureCard({ icon: Icon, title, desc }) {
   return (
@@ -29,6 +16,22 @@ function FeatureCard({ icon: Icon, title, desc }) {
 }
 
 export default function FeaturesSection() {
+  const { t } = useLanguage();
+
+  const workerFeatures = [
+    { icon: Zap, title: t("features", "quickApplyTitle"), desc: t("features", "quickApplyDesc") },
+    { icon: Shield, title: t("features", "verifiedTitle"), desc: t("features", "verifiedDesc") },
+    { icon: Clock, title: t("features", "flexibleTitle"), desc: t("features", "flexibleDesc") },
+    { icon: Globe, title: t("features", "localTitle"), desc: t("features", "localDesc") },
+  ];
+
+  const employerFeatures = [
+    { icon: Users, title: t("features", "talentTitle"), desc: t("features", "talentDesc") },
+    { icon: Briefcase, title: t("features", "matchingTitle"), desc: t("features", "matchingDesc") },
+    { icon: BarChart3, title: t("features", "analyticsTitle"), desc: t("features", "analyticsDesc") },
+    { icon: Heart, title: t("features", "brandingTitle"), desc: t("features", "brandingDesc") },
+  ];
+
   return (
     <section className="py-20 sm:py-28 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,44 +39,40 @@ export default function FeaturesSection() {
         <div className="grid lg:grid-cols-2 gap-16 items-center mb-24">
           <div>
             <div className="text-xs font-semibold tracking-wider uppercase text-accent mb-3">
-              For Workers
+              {t("features", "forWorkersLabel")}
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Your next job is one click away
+              {t("features", "forWorkersHeading")}
             </h2>
             <p className="text-muted-foreground text-lg mb-8">
-              Create your profile once and apply to hundreds of hospitality jobs instantly.
+              {t("features", "forWorkersSubtext")}
             </p>
             <div className="space-y-6">
-              {workerFeatures.map((f) => (
-                <FeatureCard key={f.title} {...f} />
-              ))}
+              {workerFeatures.map((f, i) => <FeatureCard key={i} {...f} />)}
             </div>
           </div>
           <div className="bg-gradient-to-br from-secondary to-accent/5 rounded-2xl h-80 flex items-center justify-center">
-            <span className="text-muted-foreground text-sm">Worker Dashboard Preview</span>
+            <span className="text-muted-foreground text-sm">{t("features", "workerPreview")}</span>
           </div>
         </div>
 
         {/* Employer features */}
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="order-2 lg:order-1 bg-gradient-to-br from-secondary to-primary/5 rounded-2xl h-80 flex items-center justify-center">
-            <span className="text-muted-foreground text-sm">Employer Dashboard Preview</span>
+            <span className="text-muted-foreground text-sm">{t("features", "employerPreview")}</span>
           </div>
           <div className="order-1 lg:order-2">
             <div className="text-xs font-semibold tracking-wider uppercase text-accent mb-3">
-              For Employers
+              {t("features", "forEmployersLabel")}
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Hire the right people, faster
+              {t("features", "forEmployersHeading")}
             </h2>
             <p className="text-muted-foreground text-lg mb-8">
-              Post jobs, review candidates, and manage your team — all from one platform.
+              {t("features", "forEmployersSubtext")}
             </p>
             <div className="space-y-6">
-              {employerFeatures.map((f) => (
-                <FeatureCard key={f.title} {...f} />
-              ))}
+              {employerFeatures.map((f, i) => <FeatureCard key={i} {...f} />)}
             </div>
           </div>
         </div>
