@@ -1,0 +1,24 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "candidate",
+        "employer_owner",
+        "employer_manager"
+      ],
+      "default": "candidate"
+    },
+    "onboarded": {
+      "type": "boolean",
+      "default": false
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "For employer roles"
+    }
+  }
+}

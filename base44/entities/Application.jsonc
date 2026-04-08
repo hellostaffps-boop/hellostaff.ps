@@ -1,0 +1,50 @@
+{
+  "name": "Application",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "job_title": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "organization_name": {
+      "type": "string"
+    },
+    "candidate_email": {
+      "type": "string"
+    },
+    "candidate_name": {
+      "type": "string"
+    },
+    "cover_letter": {
+      "type": "string"
+    },
+    "resume_url": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "reviewing",
+        "shortlisted",
+        "interview",
+        "offered",
+        "rejected",
+        "withdrawn"
+      ],
+      "default": "pending"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "candidate_email"
+  ]
+}

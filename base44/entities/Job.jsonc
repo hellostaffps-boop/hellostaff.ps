@@ -1,0 +1,95 @@
+{
+  "name": "Job",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "organization_name": {
+      "type": "string"
+    },
+    "job_type": {
+      "type": "string",
+      "enum": [
+        "barista",
+        "chef",
+        "waiter",
+        "cashier",
+        "host",
+        "cleaner",
+        "kitchen_helper",
+        "restaurant_manager"
+      ]
+    },
+    "employment_type": {
+      "type": "string",
+      "enum": [
+        "full_time",
+        "part_time",
+        "contract",
+        "temporary"
+      ]
+    },
+    "location": {
+      "type": "string"
+    },
+    "salary_min": {
+      "type": "number"
+    },
+    "salary_max": {
+      "type": "number"
+    },
+    "salary_period": {
+      "type": "string",
+      "enum": [
+        "hourly",
+        "daily",
+        "weekly",
+        "monthly"
+      ]
+    },
+    "experience_required": {
+      "type": "string",
+      "enum": [
+        "none",
+        "1_year",
+        "2_years",
+        "3_plus_years"
+      ]
+    },
+    "requirements": {
+      "type": "string"
+    },
+    "benefits": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published",
+        "closed",
+        "filled"
+      ],
+      "default": "draft"
+    },
+    "applications_count": {
+      "type": "number",
+      "default": 0
+    },
+    "posted_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "organization_id",
+    "job_type"
+  ]
+}

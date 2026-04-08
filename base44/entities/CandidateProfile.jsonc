@@ -1,0 +1,76 @@
+{
+  "name": "CandidateProfile",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user who owns this profile"
+    },
+    "headline": {
+      "type": "string",
+      "description": "Short professional headline"
+    },
+    "bio": {
+      "type": "string",
+      "description": "About me text"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "resume_url": {
+      "type": "string"
+    },
+    "job_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "barista",
+          "chef",
+          "waiter",
+          "cashier",
+          "host",
+          "cleaner",
+          "kitchen_helper",
+          "restaurant_manager"
+        ]
+      }
+    },
+    "experience_years": {
+      "type": "number"
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "availability": {
+      "type": "string",
+      "enum": [
+        "full_time",
+        "part_time",
+        "flexible",
+        "weekends_only"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "hired"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}
