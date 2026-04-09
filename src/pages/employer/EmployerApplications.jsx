@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { FileText, ChevronDown, MessageCircle, CalendarClock, ClipboardList, Video } from "lucide-react";
+import { FileText, ChevronDown, MessageCircle, CalendarClock, ClipboardList, Video, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../../components/PageHeader";
@@ -13,6 +13,7 @@ import { getInterviewsForApplications } from "@/lib/interviewService";
 import InterviewScheduleModal from "@/components/InterviewScheduleModal";
 import InterviewNotesModal from "@/components/InterviewNotesModal";
 import VideoCallModal from "@/components/VideoCallModal.jsx";
+import CandidateRankingModal from "@/components/CandidateRankingModal.jsx";
 import { toast } from "sonner";
 
 const STATUS_COLORS = {
@@ -42,6 +43,7 @@ export default function EmployerApplications() {
   const [scheduleApp, setScheduleApp] = useState(null);
   const [notesApp, setNotesApp] = useState(null);
   const [videoApp, setVideoApp] = useState(null);
+  const [rankingJob, setRankingJob] = useState(null);
 
   const { data: employerProfile } = useQuery({
     queryKey: ["employer-profile", firebaseUser?.uid],
@@ -98,7 +100,33 @@ export default function EmployerApplications() {
 
   return (
     <div>
-      <PageHeader title={t("dashboard", "applications")} description={t("appManagement", "subtitle")} />
+      <PageHeader title={t("dashboard", "applications")} description={t("appManagement", "subtitle")}>
+        {applications.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {jobs.length > 0 && (
+              <div className="relative">
+                <select
+                  className="text-xs border border-border rounded-lg h-8 ps-3 pe-8 bg-white text-foreground appearance-none cursor-pointer hover:border-purple-300 transition-colors"
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const job = jobs.find((j) => j.id === e.target.value);
+                    const jobApps = applications.filter((a) => a.job_id === e.target.value);
+                    if (job && jobApps.length > 0) setRankingJob({ job, applications: jobApps });
+                    e.target.value = "";
+                  }}
+                >
+                  <option value="" disabled>{ar ? "فرز ذكي للمتقدمين" : "AI Rank Applicants"}</option>
+                  {jobs.map((j) => (
+                    <option key={j.id} value={j.id}>{j.title}</option>
+                  ))}
+                </select>
+                <Sparkles className="w-3.5 h-3.5 text-purple-500 absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            )}
+          </div>
+        )}
+      </PageHeader>
 
       {!isLoading && applications.length > 0 && (
         <>
@@ -292,6 +320,13 @@ export default function EmployerApplications() {
         <VideoCallModal
           application={videoApp}
           onClose={() => setVideoApp(null)}
+        />
+      )}
+      {rankingJob && (
+        <CandidateRankingModal
+          job={rankingJob.job}
+          applications={rankingJob.applications}
+          onClose={() => setRankingJob(null)}
         />
       )}
     </div>
