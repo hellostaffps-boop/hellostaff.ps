@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getOrganization, saveOrganization, saveEmployerProfile } from "@/lib/firestoreService";
+import { getEmployerProfile, getOrganization, saveOrganizationIfOwner } from "@/lib/firestoreService";
 
 export default function CompanyProfile() {
   const { t } = useLanguage();
@@ -39,8 +39,9 @@ export default function CompanyProfile() {
   }, [org]);
 
   const handleSave = async () => {
+    if (!orgId) { toast.error("Organization not found"); return; }
     setSaving(true);
-    await saveOrganization(orgId, form);
+    await saveOrganizationIfOwner(firebaseUser.uid, orgId, form);
     queryClient.invalidateQueries({ queryKey: ["organization"] });
     toast.success(t("common", "save"));
     setSaving(false);

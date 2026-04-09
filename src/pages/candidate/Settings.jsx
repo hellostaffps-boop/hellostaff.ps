@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { updateUser } from "@/lib/firestoreService";
+import { updateSafeUserFields } from "@/lib/firestoreService";
 import { toast } from "sonner";
 
 export default function Settings() {
@@ -17,7 +17,7 @@ export default function Settings() {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateUser(firebaseUser.uid, { full_name: fullName });
+    await updateSafeUserFields(firebaseUser.uid, { full_name: fullName });
     toast.success(t("common", "save"));
     setSaving(false);
   };

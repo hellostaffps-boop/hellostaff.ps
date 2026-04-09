@@ -9,6 +9,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { recordLastLogin } from "@/lib/firestoreService";
 import { auth, db, googleProvider } from "@/lib/firebase";
 
 const FirebaseAuthContext = createContext(null);
@@ -40,9 +41,8 @@ export function FirebaseAuthProvider({ children }) {
       const data = snap.data();
       setUserProfile({ uid: user.uid, ...data });
       setNeedsRoleSetup(false);
-
-      // Update last login
-      await setDoc(ref, { last_login_at: serverTimestamp() }, { merge: true });
+      // Narrow write: only last_login_at, via service layer
+      recordLastLogin(user.uid);
     } else {
       setUserProfile(null);
       setNeedsRoleSetup(true);
@@ -59,6 +59,9 @@ export function FirebaseAuthProvider({ children }) {
   };
 
   const signUpEmail = async (email, password, fullName, role) => {
+    // Guard: platform_admin cannot be self-assigned via public signup
+    const ALLOWED_SIGNUP_ROLES = ["candidate", "employer_owner"];
+    if (!ALLOWED_SIGNUP_ROLES.includes(role)) throw new Error("Invalid role selection");
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: fullName });
     await createUserDoc(cred.user, role, fullName);
@@ -77,6 +80,9 @@ export function FirebaseAuthProvider({ children }) {
 
   const completeRoleSetup = async (role) => {
     if (!firebaseUser) return;
+    // Guard: platform_admin cannot be self-assigned via role-completion flow
+    const ALLOWED_SETUP_ROLES = ["candidate", "employer_owner"];
+    if (!ALLOWED_SETUP_ROLES.includes(role)) throw new Error("Invalid role selection");
     const fullName = firebaseUser.displayName || firebaseUser.email;
     await createUserDoc(firebaseUser, role, fullName);
     await loadUserProfile(firebaseUser);

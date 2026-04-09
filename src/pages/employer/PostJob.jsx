@@ -10,8 +10,8 @@ import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, createJob } from "@/lib/firestoreService";
-import { serverTimestamp } from "firebase/firestore";
+import { getEmployerProfile, getOrganization, createJobForOwnedOrganization } from "@/lib/firestoreService";
+
 
 export default function PostJob() {
   const { t } = useLanguage();
@@ -30,6 +30,14 @@ export default function PostJob() {
     enabled: !!firebaseUser,
   });
 
+  const orgId = employerProfile?.organization_id;
+
+  const { data: org } = useQuery({
+    queryKey: ["organization", orgId],
+    queryFn: () => getOrganization(orgId),
+    enabled: !!orgId,
+  });
+
   const categories = [
     { value: "barista", label: t("jobCard", "typeBarista") },
     { value: "chef", label: t("jobCard", "typeChef") },
@@ -43,17 +51,19 @@ export default function PostJob() {
 
   const handleSave = async (publish = false) => {
     if (!form.title) { toast.error(t("common", "required")); return; }
+    if (!employerProfile?.organization_id) { toast.error("Organization not found"); return; }
     setSaving(true);
-    await createJob({
-      ...form,
-      salary_min: form.salary_min ? Number(form.salary_min) : null,
-      salary_max: form.salary_max ? Number(form.salary_max) : null,
-      organization_id: employerProfile?.organization_id || "",
-      organization_name: "",
-      created_by: firebaseUser.uid,
-      status: publish ? "published" : "draft",
-      published_at: publish ? serverTimestamp() : null,
-    });
+    await createJobForOwnedOrganization(
+      firebaseUser.uid,
+      {
+        ...form,
+        salary_min: form.salary_min ? Number(form.salary_min) : null,
+        salary_max: form.salary_max ? Number(form.salary_max) : null,
+        status: publish ? "published" : "draft",
+      },
+      employerProfile.organization_id,
+      org?.name || ""
+    );
     toast.success(publish ? t("status", "published") : t("status", "draft"));
     setSaving(false);
     navigate("/employer/jobs");

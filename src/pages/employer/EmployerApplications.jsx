@@ -6,7 +6,7 @@ import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getApplicationsByOrg, updateApplication } from "@/lib/firestoreService";
+import { getEmployerProfile, getApplicationsByOrg, updateApplicationStatus } from "@/lib/firestoreService";
 
 const statusColors = {
   submitted: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -38,7 +38,7 @@ export default function EmployerApplications() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: ({ id, status }) => updateApplication(id, { status }),
+    mutationFn: ({ id, status }) => updateApplicationStatus(firebaseUser.uid, id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employer-applications"] }),
   });
 
