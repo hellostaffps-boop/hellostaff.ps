@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Clock, DollarSign, Briefcase, ArrowLeft, CheckCircle2, LogIn } from "lucide-react";
+import { MapPin, Clock, DollarSign, Briefcase, ArrowLeft, CheckCircle2, LogIn, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +44,7 @@ export default function JobDetails() {
 
   const isCandidate = userProfile?.role === "candidate";
   const isLoggedIn = !!firebaseUser;
+  const { savedJobIds, toggleSave } = useSavedJobs();
 
   const handleApplySubmit = async () => {
     setApplying(true);
@@ -123,7 +124,20 @@ export default function JobDetails() {
             <h1 className="text-2xl font-bold tracking-tight">{job.title}</h1>
             <p className="text-muted-foreground mt-1">{job.organization_name || t("common", "company")}</p>
           </div>
-          {applyButton}
+          <div className="flex items-center gap-2">
+            {isCandidate && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className={`h-10 w-10 ${savedJobIds.has(id) ? "text-accent" : "text-muted-foreground"}`}
+                onClick={() => toggleSave(job)}
+                title={savedJobIds.has(id) ? t("jobDetails", "unsave") : t("jobDetails", "save")}
+              >
+                <Bookmark className={`w-5 h-5 ${savedJobIds.has(id) ? "fill-accent" : ""}`} />
+              </Button>
+            )}
+            {applyButton}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-6 py-6 border-y border-border text-sm text-muted-foreground">

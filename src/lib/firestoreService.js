@@ -477,6 +477,35 @@ export const updateJob = (jobId, data) =>
 
 export const deleteJob = (jobId) => deleteDoc(doc(db, 'jobs', jobId));
 
+/**
+ * Get related jobs by same job_type or same location (excluding current job).
+ */
+export const getRelatedJobs = async (jobId, jobType, location) => {
+  const q = query(
+    collection(db, 'jobs'),
+    where('status', '==', 'published'),
+    where('job_type', '==', jobType),
+    orderBy('created_at', 'desc'),
+    limit(4)
+  );
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((j) => j.id !== jobId);
+};
+
+/** Get recently posted published jobs. */
+export const getRecentlyPostedJobs = async (count = 5) => {
+  const q = query(
+    collection(db, 'jobs'),
+    where('status', '==', 'published'),
+    orderBy('created_at', 'desc'),
+    limit(count)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+
 // ─── Application by ID ────────────────────────────────────────────────────────
 
 export const getApplicationById = (applicationId) =>

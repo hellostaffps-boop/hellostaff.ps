@@ -7,12 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import JobCard from "../components/JobCard";
 import EmptyState from "../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
-import { getPublishedJobs } from "@/lib/firestoreService";
+import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { getPublishedJobs, getCandidateProfile, getCurrentCandidateApplications } from "@/lib/firestoreService";
+import { useSavedJobs } from "@/hooks/useSavedJobs";
 
 const INITIAL_FILTERS = { search: "", category: "all", employment: "all", location: "", sort: "newest" };
 
 export default function BrowseJobs() {
   const { t } = useLanguage();
+  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const isCandidate = userProfile?.role === "candidate";
+  const { savedJobIds, toggleSave } = useSavedJobs();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
 
   const set = (key, val) => setFilters((f) => ({ ...f, [key]: val }));
@@ -40,6 +45,7 @@ export default function BrowseJobs() {
   ];
 
   const sortOptions = [
+    { value: "recommended", label: t("browseJobs", "sortRecommended") },
     { value: "newest", label: t("browseJobs", "sortNewest") },
     { value: "oldest", label: t("browseJobs", "sortOldest") },
     { value: "salary_high", label: t("browseJobs", "sortSalaryHigh") },
@@ -50,6 +56,20 @@ export default function BrowseJobs() {
     queryKey: ["published-jobs"],
     queryFn: getPublishedJobs,
   });
+
+  const { data: candidateProfile } = useQuery({
+    queryKey: ["my-candidate-profile", firebaseUser?.uid],
+    queryFn: () => getCandidateProfile(firebaseUser.uid),
+    enabled: !!firebaseUser && isCandidate,
+  });
+
+  const { data: myApplications = [] } = useQuery({
+    queryKey: ["my-applications", firebaseUser?.uid],
+    queryFn: () => getCurrentCandidateApplications(firebaseUser.uid),
+    enabled: !!firebaseUser && isCandidate,
+  });
+
+  const appliedJobIds = useMemo(() => new Set(myApplications.map((a) => a.job_id)), [myApplications]);
 
   const filtered = useMemo(() => {
     let list = [...jobs];
@@ -69,6 +89,16 @@ export default function BrowseJobs() {
       if (filters.sort === "oldest") return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
       if (filters.sort === "salary_high") return (b.salary_max || b.salary_min || 0) - (a.salary_max || a.salary_min || 0);
       if (filters.sort === "salary_low") return (a.salary_min || 0) - (b.salary_min || 0);
+      if (filters.sort === "recommended" && candidateProfile) {
+        const score = (j) => {
+          let s = 0;
+          if (candidateProfile.preferred_roles?.includes(j.job_type)) s += 3;
+          if (candidateProfile.city && j.location?.toLowerCase().includes(candidateProfile.city.toLowerCase())) s += 2;
+          s += Math.max(0, 1 - ((Date.now() / 1000 - (j.created_at?.seconds || 0)) / (86400 * 30)));
+          return s;
+        };
+        return score(b) - score(a);
+      }
       return (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0); // newest
     });
     return list;
@@ -155,7 +185,16 @@ export default function BrowseJobs() {
         )
       ) : (
         <div className="grid gap-4">
-          {filtered.map((job) => <JobCard key={job.id} job={job} showSave />)}
+          {filtered.map((job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              showSave={isCandidate}
+              saved={savedJobIds.has(job.id)}
+              applied={appliedJobIds.has(job.id)}
+              onSave={(j) => toggleSave(j)}
+            />
+          ))}
         </div>
       )}
     </div>

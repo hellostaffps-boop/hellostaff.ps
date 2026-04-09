@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import { MapPin, Clock, DollarSign, Bookmark } from "lucide-react";
+import { MapPin, Clock, DollarSign, Bookmark, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/hooks/useLanguage";
 
-export default function JobCard({ job, showSave, onSave, saved }) {
+export default function JobCard({ job, showSave, onSave, saved, applied }) {
   const { t } = useLanguage();
 
   const typeLabels = {
@@ -73,11 +73,23 @@ export default function JobCard({ job, showSave, onSave, saved }) {
           </div>
         </div>
 
-        {showSave && (
-          <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => onSave && onSave(job.id)}>
-            <Bookmark className={`w-4 h-4 ${saved ? "fill-accent text-accent" : ""}`} />
-          </Button>
-        )}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {applied && (
+            <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium">
+              <CheckCircle2 className="w-3 h-3" /> {useLanguage ? null : null}
+            </span>
+          )}
+          {showSave && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 transition-colors ${saved ? "text-accent" : "text-muted-foreground hover:text-accent"}`}
+              onClick={(e) => { e.preventDefault(); onSave && onSave(job); }}
+            >
+              <Bookmark className={`w-4 h-4 ${saved ? "fill-accent" : ""}`} />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

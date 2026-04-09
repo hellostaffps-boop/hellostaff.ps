@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, FileText, Star, CheckCircle2 } from "lucide-react";
+import { Briefcase, FileText, Star, CheckCircle2, Bookmark, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import StatsCard from "../../components/StatsCard";
 import PageHeader from "../../components/PageHeader";
 import JobCard from "../../components/JobCard";
@@ -9,7 +10,9 @@ import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
 import { getApplicationsByCandidate, getPublishedJobs, getCandidateProfile } from "@/lib/firestoreService";
+import { getSavedJobs } from "@/lib/savedJobsService";
 import { getCandidateCompletion } from "@/lib/profileCompletion";
+import { useSavedJobs } from "@/hooks/useSavedJobs";
 
 const STATUS_COLORS = {
   submitted: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -40,6 +43,13 @@ export default function Dashboard() {
     enabled: !!firebaseUser,
   });
 
+  const { data: savedJobDocs = [] } = useQuery({
+    queryKey: ["saved-jobs", firebaseUser?.uid],
+    queryFn: () => getSavedJobs(firebaseUser.uid),
+    enabled: !!firebaseUser,
+  });
+
+  const { savedJobIds, toggleSave } = useSavedJobs();
   const completion = getCandidateCompletion(candidateProfile);
 
   const reviewing = applications.filter((a) => a.status === "reviewing").length;
@@ -50,7 +60,7 @@ export default function Dashboard() {
     { icon: FileText, label: t("dashboard", "applicationsSent"), value: applications.length },
     { icon: Briefcase, label: t("status", "reviewing"), value: reviewing },
     { icon: Star, label: t("status", "shortlisted"), value: shortlisted },
-    { icon: CheckCircle2, label: t("status", "hired"), value: hired },
+    { icon: Bookmark, label: t("dashboard", "savedJobsCount"), value: savedJobDocs.length },
   ];
 
   const recentApps = applications.slice(0, 5);
@@ -101,13 +111,52 @@ export default function Dashboard() {
         </div>
 
         <div>
-          <h2 className="font-semibold text-base mb-4">{t("dashboard", "recommendedJobs")}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-base">{t("dashboard", "recommendedJobs")}</h2>
+            <Link to="/candidate/jobs" className="text-xs text-accent hover:underline flex items-center gap-1">
+              {t("dashboard", "browseAll")} <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
           {recentJobs.length === 0 ? (
             <EmptyState icon={Briefcase} title={t("dashboard", "noJobsAvailable")}
               description={t("dashboard", "noJobsAvailableDesc")} />
           ) : (
             <div className="space-y-3">
-              {recentJobs.map((job) => <JobCard key={job.id} job={job} />)}
+              {recentJobs.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  showSave
+                  saved={savedJobIds.has(job.id)}
+                  onSave={(j) => toggleSave(j)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Saved jobs widget */}
+          {savedJobDocs.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-sm flex items-center gap-2">
+                  <Bookmark className="w-4 h-4 text-accent" /> {t("savedJobs", "title")}
+                </h2>
+                <Link to="/candidate/saved" className="text-xs text-accent hover:underline">
+                  {t("dashboard", "viewAll")}
+                </Link>
+              </div>
+              <div className="space-y-2">
+                {savedJobDocs.slice(0, 3).map((saved) => (
+                  <Link key={saved.id} to={`/jobs/${saved.job_id}`}
+                    className="flex items-center justify-between bg-white rounded-xl border border-border px-4 py-3 hover:border-accent/30 transition-colors">
+                    <div>
+                      <div className="text-sm font-medium">{saved.job_title}</div>
+                      <div className="text-xs text-muted-foreground">{saved.organization_name}</div>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
         </div>

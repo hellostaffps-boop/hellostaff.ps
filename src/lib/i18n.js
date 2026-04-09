@@ -248,6 +248,7 @@ const translations = {
       locationPlaceholder: "City or location...",
       allCategories: "All Categories",
       allTypes: "All Types",
+      sortRecommended: "Recommended",
       sortNewest: "Newest First",
       sortOldest: "Oldest First",
       sortSalaryHigh: "Highest Salary",
@@ -296,6 +297,8 @@ const translations = {
       coverLetter: "Cover Letter",
       coverLetterPlaceholder: "Tell the employer why you're a great fit for this role...",
       submitApplication: "Submit Application",
+      save: "Save Job",
+      unsave: "Unsave Job",
     },
     dashboard: {
       newApplications: "New This Week",
@@ -383,6 +386,12 @@ const translations = {
       noSaved: "No saved jobs yet",
       noSavedDesc: "When you find a job you're interested in, save it here to apply later.",
       browseJobs: "Browse Jobs",
+      savedOn: "Saved on",
+      unsaved: "Job removed from saved",
+    },
+    dashboard: {
+      browseAll: "Browse all",
+      viewAll: "View all",
     },
     notifications: {
       title: "Notifications",
@@ -806,6 +815,7 @@ const translations = {
       locationPlaceholder: "المدينة أو الموقع...",
       allCategories: "جميع الفئات",
       allTypes: "جميع الأنواع",
+      sortRecommended: "موصى بها",
       sortNewest: "الأحدث أولاً",
       sortOldest: "الأقدم أولاً",
       sortSalaryHigh: "أعلى راتب",
@@ -854,6 +864,8 @@ const translations = {
       coverLetter: "رسالة التقديم",
       coverLetterPlaceholder: "أخبر صاحب العمل لماذا أنت مناسب لهذه الوظيفة...",
       submitApplication: "إرسال الطلب",
+      save: "حفظ الوظيفة",
+      unsave: "إلغاء الحفظ",
     },
     jobCard: {
       company: "الشركة",
@@ -938,6 +950,12 @@ const translations = {
       noSaved: "لا توجد وظائف محفوظة بعد",
       noSavedDesc: "عندما تجد وظيفة تهتم بها، احفظها هنا للتقديم لاحقاً.",
       browseJobs: "تصفح الوظائف",
+      savedOn: "تم الحفظ بتاريخ",
+      unsaved: "تمت إزالة الوظيفة من المحفوظات",
+    },
+    dashboard: {
+      browseAll: "تصفح الكل",
+      viewAll: "عرض الكل",
     },
     notifications: {
       title: "الإشعارات",
