@@ -8,7 +8,6 @@ import EmptyState from "../../components/EmptyState";
 import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { useQuery } from "@tanstack/react-query";
 import { getEmployerProfile, getEmployerOrganizationJobs, getApplicationsByOrg, getOrganization, getApplicationEvaluation, getEmployerHiringReviewSummary } from "@/lib/firestoreService";
 import { getOrganizationMemberCount } from "@/lib/teamService";
 import { getOrgCompletion } from "@/lib/profileCompletion";
