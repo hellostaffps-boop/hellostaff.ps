@@ -18,6 +18,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -397,3 +398,17 @@ export const getNotifications = async (uid) => {
  */
 export const markNotificationRead = (notifId) =>
   updateDoc(doc(db, "notifications", notifId), { is_read: true, updated_at: serverTimestamp() });
+
+// ─── Backward-compatible job helpers ───────────────────────────────────────
+
+export const getJobsByOrg = async (orgId) => {
+  if (!orgId) return [];
+  const q = query(collection(db, 'jobs'), where('organization_id', '==', orgId), orderBy('created_at', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+
+export const updateJob = (jobId, data) =>
+  updateDoc(doc(db, 'jobs', jobId), { ...data, updated_at: serverTimestamp() });
+
+export const deleteJob = (jobId) => deleteDoc(doc(db, 'jobs', jobId));
