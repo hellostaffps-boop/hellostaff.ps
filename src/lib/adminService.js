@@ -112,8 +112,16 @@ export const getAdminReportsSafe = async (userProfile) => {
 //   import { promoteUserRole, suspendUser, isPrivilegedActionError } from '@/lib/privilegedActions';
 
 /**
- * STUB: Verify an organization.
- * Can be unlocked when Security Rules allow admin write to organizations.verified.
+ * Get audit logs for the admin dashboard.
+ * Delegates to auditLogService — imported here for convenience.
+ * Requires platform_admin role.
+ */
+export { getAuditLogsSafe, getAuditLogsForTarget, getFailedAuditLogsSafe } from "@/lib/backend/auditLogService";
+
+/**
+ * Verify an organization — delegates to privileged backend.
+ * Direct Firestore write kept for backward compatibility but
+ * production should route through requestVerifyOrganization() from privilegedActionService.
  */
 export const verifyOrganization = async (userProfile, orgId) => {
   assertAdmin(userProfile);

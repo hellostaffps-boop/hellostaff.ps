@@ -51,13 +51,30 @@ const privilegedError = (actionName) => {
 };
 
 /**
- * Future: replace this with actual Cloud Function invocation.
- * e.g. import { getFunctions, httpsCallable } from 'firebase/functions';
- *      return httpsCallable(functions, functionName)(payload);
+ * Delegates to privilegedActionService.js which uses Firebase httpsCallable.
+ * If Cloud Functions are not deployed, the service returns { success: false, errorCode: 'BACKEND_NOT_DEPLOYED' }.
+ * This wrapper converts that back into a thrown error for backward compatibility with Phase 4.1 callers.
  */
-const callCloudFunction = async (_functionName, _payload) => {
-  // TODO: wire up Firebase Functions SDK call here when functions are deployed
-  throw new Error("Cloud Functions not yet deployed");
+import {
+  requestPromoteUserRole,
+  requestSuspendUser,
+  requestReactivateUser,
+  requestVerifyOrganization,
+  requestAssignEmployerManager,
+  requestRevokeEmployerManager,
+  requestForceCloseJob,
+  requestModerateAdminReport,
+  requestVerifyCandidate,
+} from "@/lib/backend/privilegedActionService";
+
+const wrapServiceCall = async (serviceCall) => {
+  const result = await serviceCall;
+  if (!result.success) {
+    const err = new Error(result.message || "Privileged action failed");
+    err.code = result.errorCode || "PRIVILEGED_ACTION_REQUIRED";
+    throw err;
+  }
+  return result.data;
 };
 
 // ─── User Management (Admin-Only) ────────────────────────────────────────────
@@ -69,9 +86,8 @@ const callCloudFunction = async (_functionName, _payload) => {
  * @param {string} targetUid - The uid of the user to promote
  * @param {string} newRole - The target role (e.g. 'employer_manager', 'platform_admin')
  */
-export const promoteUserRole = async (targetUid, newRole) => {
-  throw privilegedError("promoteUserRole");
-};
+export const promoteUserRole = async (targetUid, newRole) =>
+  wrapServiceCall(requestPromoteUserRole(targetUid, newRole));
 
 /**
  * Suspend a user account.
@@ -80,18 +96,16 @@ export const promoteUserRole = async (targetUid, newRole) => {
  * @param {string} targetUid
  * @param {string} reason
  */
-export const suspendUser = async (targetUid, reason) => {
-  throw privilegedError("suspendUser");
-};
+export const suspendUser = async (targetUid, reason) =>
+  wrapServiceCall(requestSuspendUser(targetUid, reason));
 
 /**
  * Reactivate a suspended user.
  *
  * @param {string} targetUid
  */
-export const reactivateUser = async (targetUid) => {
-  throw privilegedError("reactivateUser");
-};
+export const reactivateUser = async (targetUid) =>
+  wrapServiceCall(requestReactivateUser(targetUid));
 
 // ─── Organization Management (Admin-Only) ────────────────────────────────────
 
@@ -101,9 +115,8 @@ export const reactivateUser = async (targetUid) => {
  *
  * @param {string} orgId
  */
-export const verifyOrganization = async (orgId) => {
-  throw privilegedError("verifyOrganization");
-};
+export const verifyOrganization = async (orgId) =>
+  wrapServiceCall(requestVerifyOrganization(orgId));
 
 /**
  * Assign an employer_manager to an organization.
@@ -112,9 +125,8 @@ export const verifyOrganization = async (orgId) => {
  * @param {string} orgId
  * @param {string} targetUid
  */
-export const assignEmployerManager = async (orgId, targetUid) => {
-  throw privilegedError("assignEmployerManager");
-};
+export const assignEmployerManager = async (orgId, targetUid) =>
+  wrapServiceCall(requestAssignEmployerManager(orgId, targetUid));
 
 /**
  * Remove a manager from an organization.
@@ -122,9 +134,8 @@ export const assignEmployerManager = async (orgId, targetUid) => {
  * @param {string} orgId
  * @param {string} memberUid
  */
-export const removeOrganizationMember = async (orgId, memberUid) => {
-  throw privilegedError("removeOrganizationMember");
-};
+export const removeOrganizationMember = async (orgId, memberUid) =>
+  wrapServiceCall(requestRevokeEmployerManager(orgId, memberUid));
 
 /**
  * Transfer organization ownership.
@@ -147,9 +158,8 @@ export const transferOrganizationOwnership = async (orgId, newOwnerUid) => {
  * @param {string} jobId
  * @param {string} reason
  */
-export const forceCloseJob = async (jobId, reason) => {
-  throw privilegedError("forceCloseJob");
-};
+export const forceCloseJob = async (jobId, reason) =>
+  wrapServiceCall(requestForceCloseJob(jobId, reason));
 
 // ─── Moderation (Admin-Only) ─────────────────────────────────────────────────
 
@@ -160,9 +170,8 @@ export const forceCloseJob = async (jobId, reason) => {
  * @param {'resolved'|'dismissed'} resolution
  * @param {string} [notes]
  */
-export const resolveAdminReport = async (reportId, resolution, notes = "") => {
-  throw privilegedError("resolveAdminReport");
-};
+export const resolveAdminReport = async (reportId, resolution, notes = "") =>
+  wrapServiceCall(requestModerateAdminReport(reportId, resolution, notes));
 
 // ─── Global Settings (Admin-Only) ────────────────────────────────────────────
 
@@ -185,9 +194,8 @@ export const setGlobalSetting = async (key, value) => {
  *
  * @param {string} candidateUid
  */
-export const verifyCandidate = async (candidateUid) => {
-  throw privilegedError("verifyCandidate");
-};
+export const verifyCandidate = async (candidateUid) =>
+  wrapServiceCall(requestVerifyCandidate(candidateUid));
 
 // ─── Generic stub for unknown privileged actions ──────────────────────────────
 
@@ -214,4 +222,6 @@ export const privilegedActionPlaceholder = async (actionName, payload = {}) => {
  * @returns {boolean}
  */
 export const isPrivilegedActionError = (err) =>
-  err?.code === "PRIVILEGED_ACTION_REQUIRED";
+  err?.code === "PRIVILEGED_ACTION_REQUIRED" ||
+  err?.code === "BACKEND_NOT_DEPLOYED" ||
+  err?.code === "PERMISSION_DENIED";
