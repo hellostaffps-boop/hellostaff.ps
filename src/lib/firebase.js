@@ -1,15 +1,29 @@
+/**
+ * firebase.js — Firebase initialization
+ *
+ * All config values are read from environment variables (Vite VITE_* prefix).
+ * Never hardcode Firebase credentials in source code.
+ *
+ * SECURITY NOTE — API Key Restrictions:
+ * Enforce HTTP referrer restrictions for this key in:
+ * Google Cloud Console → APIs & Services → Credentials → Browser key
+ * Allowed referrers:
+ *   - https://staffps.com/*
+ *   - https://staffps.base44.app/*
+ */
+
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDV87v-APxrawegKOSZbJPOOZH_n5zhCvc",
-  authDomain: "hello-staff-ed0a1.firebaseapp.com",
-  projectId: "hello-staff-ed0a1",
-  storageBucket: "hello-staff-ed0a1.firebasestorage.app",
-  messagingSenderId: "558221662269",
-  appId: "1:558221662269:web:f8e6be5347a2df70ad3254",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
