@@ -21,24 +21,10 @@ export function FirebaseAuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [needsRoleSetup, setNeedsRoleSetup] = useState(false);
 
-  // Surface Firebase init errors immediately — never crash silently
+  // If Firebase failed to initialize, show error screen instead of crashing
   if (firebaseInitError) {
     return <FirebaseErrorScreen error={firebaseInitError} />;
   }
-
-  const loadUserProfile = async (user) => {
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const data = snap.data();
-      setUserProfile({ uid: user.uid, ...data });
-      setNeedsRoleSetup(false);
-      recordLastLogin(user.uid);
-    } else {
-      setUserProfile(null);
-      setNeedsRoleSetup(true);
-    }
-  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -53,6 +39,26 @@ export function FirebaseAuthProvider({ children }) {
     });
     return unsubscribe;
   }, []);
+
+  const loadUserProfile = async (user) => {
+    try {
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        setUserProfile({ uid: user.uid, ...data });
+        setNeedsRoleSetup(false);
+        recordLastLogin(user.uid);
+      } else {
+        setUserProfile(null);
+        setNeedsRoleSetup(true);
+      }
+    } catch (err) {
+      console.error("[Auth] loadUserProfile failed:", err.message);
+      setUserProfile(null);
+      setLoading(false);
+    }
+  };
 
   const signInEmail = async (email, password) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);

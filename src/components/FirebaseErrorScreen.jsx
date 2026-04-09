@@ -3,33 +3,55 @@
  * Bilingual: Arabic (default) + English.
  */
 export default function FirebaseErrorScreen({ error }) {
-  const reload = () => window.location.reload();
-
   return (
     <div
       dir="rtl"
-      className="min-h-screen flex items-center justify-center bg-background px-4"
-      style={{ fontFamily: "'Tajawal', sans-serif" }}
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem",
+        fontFamily: "'Tajawal', sans-serif",
+        background: "#fafafa",
+      }}
     >
-      <div className="max-w-md w-full text-center">
-        <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 16,
+          background: "#fef2f2", display: "flex",
+          alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem",
+        }}>
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#ef4444">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold mb-2">تعذّر تشغيل التطبيق</h1>
-        <p className="text-sm text-gray-500 mb-1">حدث خطأ أثناء الاتصال بالخدمة. يرجى المحاولة مجدداً.</p>
-        <p className="text-xs text-gray-400 mb-6" dir="ltr">App failed to initialize. Please try again.</p>
+        <h1 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: 8 }}>
+          تعذّر تشغيل التطبيق
+        </h1>
+        <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: 4 }}>
+          حدث خطأ أثناء الاتصال بالخدمة. يرجى المحاولة مجدداً.
+        </p>
+        <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginBottom: 24, direction: "ltr" }}>
+          App failed to initialize. Please try again.
+        </p>
         {error?.message && (
-          <p className="text-xs text-red-400 bg-red-50 rounded-lg px-4 py-2 mb-6 font-mono break-all" dir="ltr">
+          <p style={{
+            fontSize: "0.7rem", color: "#f87171", background: "#fef2f2",
+            borderRadius: 8, padding: "8px 12px", marginBottom: 24,
+            fontFamily: "monospace", direction: "ltr", wordBreak: "break-all",
+          }}>
             {error.message}
           </p>
         )}
         <button
-          onClick={reload}
-          className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-          style={{ background: "hsl(222 47% 18%)", color: "white" }}
+          onClick={() => window.location.reload()}
+          style={{
+            padding: "10px 24px", borderRadius: 12, border: "none", cursor: "pointer",
+            background: "hsl(222 47% 18%)", color: "white",
+            fontSize: "0.875rem", fontWeight: 500,
+          }}
         >
           إعادة المحاولة &nbsp;/&nbsp; Retry
         </button>
