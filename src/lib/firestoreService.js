@@ -82,10 +82,13 @@ export const getCandidateProfile = (uid) =>
  * Save own candidate profile. Strips user_id override from caller — always uses uid param.
  * Never allows writing role/status.
  */
-export const saveCandidateProfile = (uid, data) => {
+export const saveCandidateProfile = async (uid, data) => {
   const safe = stripProtectedFields(data);
-  // Enforce user_id is always the real uid, not caller-supplied
   safe.user_id = uid;
+  // Merge with existing to get full picture for completion calc
+  const existing = await getCandidateProfile(uid);
+  const merged = { ...existing, ...safe };
+  safe.profile_completion = calculateCandidateProfileCompletion(merged);
   return setDoc(
     doc(db, "candidate_profiles", uid),
     { ...safe, updated_at: serverTimestamp() },
@@ -462,6 +465,63 @@ const createNotification = (userId, { title, message, type = 'system', link = ''
     is_read: false,
     created_at: serverTimestamp(),
   });
+
+// ─── Profile Completion ─────────────────────────────────────────────────────
+
+/**
+ * Calculate candidate profile completion percentage based on actual filled fields.
+ */
+export const calculateCandidateProfileCompletion = (profile) => {
+  if (!profile) return 0;
+  const checks = [
+    !!profile.headline,
+    !!profile.bio,
+    !!profile.city,
+    !!profile.phone,
+    Array.isArray(profile.preferred_roles) && profile.preferred_roles.length > 0,
+    Array.isArray(profile.skills) && profile.skills.length > 0,
+    typeof profile.years_experience === 'number' && profile.years_experience >= 0,
+    !!profile.availability,
+    !!profile.cv_url,
+    Array.isArray(profile.work_experience) && profile.work_experience.length > 0,
+  ];
+  const filled = checks.filter(Boolean).length;
+  return Math.round((filled / checks.length) * 100);
+};
+
+/**
+ * Calculate employer/organization profile completion.
+ */
+export const calculateEmployerProfileCompletion = (org) => {
+  if (!org) return 0;
+  const checks = [
+    !!org.name,
+    !!org.business_type,
+    !!org.city,
+    !!org.address,
+    !!org.logo_url,
+    !!org.description,
+    !!org.website,
+    !!org.phone,
+  ];
+  const filled = checks.filter(Boolean).length;
+  return Math.round((filled / checks.length) * 100);
+};
+
+/**
+ * Get organization owned by a specific user (queries by owner_user_id).
+ * Handles cases where org may have been created with a non-uid document ID.
+ */
+export const getOwnedOrganization = async (uid) => {
+  const q = query(
+    collection(db, 'organizations'),
+    where('owner_user_id', '==', uid),
+    limit(1)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return { id: snap.docs[0].id, ...snap.docs[0].data() };
+};
 
 // ─── Backward-compatible job helpers ───────────────────────────────────────
 

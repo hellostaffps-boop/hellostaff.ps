@@ -11,6 +11,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { recordLastLogin } from "@/lib/firestoreService";
 import { auth, db, googleProvider, firebaseInitError } from "@/lib/firebase";
+import { getOwnedOrganization } from "@/lib/firestoreService";
 import FirebaseErrorScreen from "@/components/FirebaseErrorScreen";
 
 const FirebaseAuthContext = createContext(null);
@@ -126,18 +127,27 @@ export function FirebaseAuthProvider({ children }) {
         updated_at: serverTimestamp(),
       });
     } else if (role === "employer_owner") {
-      const orgRef = doc(db, "organizations", uid + "_org");
-      await setDoc(orgRef, {
-        name: fullName ? `${fullName}'s Organization` : "My Organization",
-        business_type: "",
-        city: "",
-        address: "",
-        logo_url: "",
-        owner_user_id: uid,
-        status: "active",
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
-      });
+      // Check for existing org to prevent duplicates on repeated calls
+      const existingOrg = await getOwnedOrganization(uid);
+      const orgRef = existingOrg
+        ? doc(db, "organizations", existingOrg.id)
+        : doc(db, "organizations", uid + "_org");
+
+      if (!existingOrg) {
+        await setDoc(orgRef, {
+          name: fullName ? `${fullName}'s Organization` : "My Organization",
+          business_type: "",
+          city: "",
+          address: "",
+          logo_url: "",
+          owner_user_id: uid,
+          status: "active",
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp(),
+        });
+      }
+
+      // Always upsert employer_profiles/{uid} — safe on repeat calls
       await setDoc(doc(db, "employer_profiles", uid), {
         user_id: uid,
         organization_id: orgRef.id,
@@ -145,14 +155,16 @@ export function FirebaseAuthProvider({ children }) {
         phone: "",
         is_primary_contact: true,
         updated_at: serverTimestamp(),
-      });
+      }, { merge: true });
+
+      // Upsert org membership — won't overwrite existing data
       await setDoc(doc(db, "organization_members", uid + "_member"), {
         organization_id: orgRef.id,
         user_id: uid,
         role: "owner",
         status: "active",
         created_at: serverTimestamp(),
-      });
+      }, { merge: true });
     }
   };
 
