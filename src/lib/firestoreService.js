@@ -27,6 +27,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getCandidateCompletion } from "@/lib/profileCompletion";
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -88,7 +89,8 @@ export const saveCandidateProfile = async (uid, data) => {
   // Merge with existing to get full picture for completion calc
   const existing = await getCandidateProfile(uid);
   const merged = { ...existing, ...safe };
-  safe.profile_completion = calculateCandidateProfileCompletion(merged);
+  // Use the canonical weighted completion from profileCompletion.js
+  safe.profile_completion = getCandidateCompletion(merged).score;
   return setDoc(
     doc(db, "candidate_profiles", uid),
     { ...safe, updated_at: serverTimestamp() },
@@ -467,27 +469,6 @@ const createNotification = (userId, { title, message, type = 'system', link = ''
   });
 
 // ─── Profile Completion ─────────────────────────────────────────────────────
-
-/**
- * Calculate candidate profile completion percentage based on actual filled fields.
- */
-export const calculateCandidateProfileCompletion = (profile) => {
-  if (!profile) return 0;
-  const checks = [
-    !!profile.headline,
-    !!profile.bio,
-    !!profile.city,
-    !!profile.phone,
-    Array.isArray(profile.preferred_roles) && profile.preferred_roles.length > 0,
-    Array.isArray(profile.skills) && profile.skills.length > 0,
-    typeof profile.years_experience === 'number' && profile.years_experience >= 0,
-    !!profile.availability,
-    !!profile.cv_url,
-    Array.isArray(profile.work_experience) && profile.work_experience.length > 0,
-  ];
-  const filled = checks.filter(Boolean).length;
-  return Math.round((filled / checks.length) * 100);
-};
 
 /**
  * Calculate employer/organization profile completion.

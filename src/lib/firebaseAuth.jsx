@@ -100,32 +100,34 @@ export function FirebaseAuthProvider({ children }) {
 
   const createUserDoc = async (user, role, fullName) => {
     const uid = user.uid;
-    await setDoc(doc(db, "users", uid), {
-      uid,
-      email: user.email,
-      full_name: fullName || user.displayName || "",
-      role,
-      status: "active",
-      preferred_language: "ar",
-      created_at: serverTimestamp(),
-      last_login_at: serverTimestamp(),
-    });
+    const userRef = doc(db, "users", uid);
+    const existingSnap = await getDoc(userRef);
+    if (!existingSnap.exists()) {
+      // Only write on first creation — never overwrite role/status/created_at
+      await setDoc(userRef, {
+        uid,
+        email: user.email,
+        full_name: fullName || user.displayName || "",
+        role,
+        status: "active",
+        preferred_language: "ar",
+        created_at: serverTimestamp(),
+        last_login_at: serverTimestamp(),
+      });
+    } else {
+      // Existing user — only update mutable fields safely
+      await setDoc(userRef, {
+        last_login_at: serverTimestamp(),
+        full_name: fullName || existingSnap.data().full_name || "",
+      }, { merge: true });
+    }
 
     if (role === "candidate") {
+      // Use merge:true — safe on repeat calls, won't wipe real profile data
       await setDoc(doc(db, "candidate_profiles", uid), {
         user_id: uid,
-        headline: "",
-        bio: "",
-        city: "",
-        phone: "",
-        skills: [],
-        years_experience: 0,
-        preferred_roles: [],
-        availability: "flexible",
-        cv_url: "",
-        profile_completion: 0,
         updated_at: serverTimestamp(),
-      });
+      }, { merge: true });
     } else if (role === "employer_owner") {
       // Check for existing org to prevent duplicates on repeated calls
       const existingOrg = await getOwnedOrganization(uid);
