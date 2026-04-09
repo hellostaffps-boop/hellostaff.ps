@@ -32,6 +32,7 @@ import PostJob from './pages/employer/PostJob';
 import ManageJobs from './pages/employer/ManageJobs';
 import EmployerApplications from './pages/employer/EmployerApplications';
 import CompanyProfile from './pages/employer/CompanyProfile';
+import EmployerNotifications from './pages/employer/Notifications';
 
 const AuthenticatedApp = () => {
   return (
@@ -71,6 +72,7 @@ const AuthenticatedApp = () => {
           <Route path="post-job" element={<PostJob />} />
           <Route path="jobs" element={<ManageJobs />} />
           <Route path="applications" element={<EmployerApplications />} />
+          <Route path="notifications" element={<EmployerNotifications />} />
         </Route>
       </Route>
 

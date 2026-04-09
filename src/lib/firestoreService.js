@@ -339,13 +339,30 @@ export const createApplicationForCurrentCandidate = async (uid, jobId, data) => 
   const safe = {};
   ALLOWED_APP_FIELDS.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
 
-  return addDoc(collection(db, "applications"), {
+  const appRef = await addDoc(collection(db, 'applications'), {
     ...safe,
     job_id: jobId,
-    candidate_user_id: uid,         // Always enforced, never from caller data
-    status: "submitted",            // Always starts at submitted
+    candidate_user_id: uid,
+    status: 'submitted',
     applied_at: serverTimestamp(),
   });
+
+  // Notify org owner about new application
+  try {
+    if (safe.organization_id) {
+      const orgSnap = await getDoc(doc(db, 'organizations', safe.organization_id));
+      if (orgSnap.exists() && orgSnap.data().owner_user_id) {
+        await createNotification(orgSnap.data().owner_user_id, {
+          title: 'New Application Received',
+          message: `${safe.candidate_name || 'A candidate'} applied for "${safe.job_title || 'your job'}"`,
+          type: 'application',
+          link: '/employer/applications',
+        });
+      }
+    }
+  } catch (_) { /* non-blocking */ }
+
+  return appRef;
 };
 
 // Backward-compatible alias
@@ -367,10 +384,32 @@ export const updateApplicationStatus = async (uid, applicationId, newStatus) => 
   if (!appSnap.exists()) throw new Error("Application not found");
   if (appSnap.data().organization_id !== profile.organization_id) throw new Error("FORBIDDEN: application belongs to another organization");
 
-  return updateDoc(doc(db, "applications", applicationId), {
+  await updateDoc(doc(db, 'applications', applicationId), {
     status: newStatus,
     updated_at: serverTimestamp(),
   });
+
+  // Notify the candidate about status change
+  const statusMessages = {
+    reviewing: 'Your application is under review',
+    shortlisted: 'Great news! You have been shortlisted',
+    interview: 'Interview scheduled — check your application for details',
+    offered: '🎉 You have received a job offer!',
+    rejected: 'Your application was not selected at this time',
+    withdrawn: 'Your application has been withdrawn',
+    hired: '🎊 Congratulations! You have been hired',
+  };
+  try {
+    const candidateUid = appSnap.data().candidate_user_id;
+    if (candidateUid && statusMessages[newStatus]) {
+      await createNotification(candidateUid, {
+        title: statusMessages[newStatus],
+        message: `Application for "${appSnap.data().job_title || 'a job'}" — status updated to: ${newStatus}`,
+        type: 'application',
+        link: '/candidate/applications',
+      });
+    }
+  } catch (_) { /* non-blocking */ }
 };
 
 // Backward-compatible alias (used by EmployerApplications)
@@ -398,6 +437,30 @@ export const getNotifications = async (uid) => {
  */
 export const markNotificationRead = (notifId) =>
   updateDoc(doc(db, "notifications", notifId), { is_read: true, updated_at: serverTimestamp() });
+
+export const markAllNotificationsRead = async (uid) => {
+  const q = query(collection(db, 'notifications'), where('user_id', '==', uid), where('is_read', '==', false));
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map((d) => updateDoc(d.ref, { is_read: true, updated_at: serverTimestamp() })));
+};
+
+export const getUnreadNotificationsCount = async (uid) => {
+  const q = query(collection(db, 'notifications'), where('user_id', '==', uid), where('is_read', '==', false));
+  const snap = await getDocs(q);
+  return snap.size;
+};
+
+/** Internal: create a notification for a user. */
+const createNotification = (userId, { title, message, type = 'system', link = '' }) =>
+  addDoc(collection(db, 'notifications'), {
+    user_id: userId,
+    title,
+    message,
+    type,
+    link,
+    is_read: false,
+    created_at: serverTimestamp(),
+  });
 
 // ─── Backward-compatible job helpers ───────────────────────────────────────
 

@@ -6,7 +6,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/firestoreService";
 
-export default function Notifications() {
+export default function EmployerNotifications() {
   const { t } = useLanguage();
   const { firebaseUser } = useFirebaseAuth();
   const queryClient = useQueryClient();
@@ -26,10 +26,10 @@ export default function Notifications() {
 
   return (
     <div>
-      <PageHeader title={t('notifications', 'title')} description={t('notifications', 'subtext')}>
+      <PageHeader title={t("notifications", "title")} description={t("notifications", "subtext")}>
         {unreadCount > 0 && (
           <button
-            onClick={() => markAllNotificationsRead(firebaseUser.uid).then(() => queryClient.invalidateQueries({ queryKey: ['my-notifications'] }))}
+            onClick={() => markAllNotificationsRead(firebaseUser.uid).then(() => queryClient.invalidateQueries({ queryKey: ["my-notifications"] }))}
             className="text-xs text-accent font-medium hover:underline">
             Mark all as read
           </button>
@@ -41,14 +41,14 @@ export default function Notifications() {
           <div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" />
         </div>
       ) : notifications.length === 0 ? (
-        <EmptyState icon={Bell} title={t('notifications', 'noNotifications')}
-          description={t('notifications', 'noNotificationsDesc')} />
+        <EmptyState icon={Bell} title={t("notifications", "noNotifications")}
+          description={t("notifications", "noNotificationsDesc")} />
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => (
             <div key={n.id}
               className={`bg-white rounded-xl border border-border p-4 cursor-pointer transition-colors hover:bg-secondary/30 ${
-                !n.is_read ? 'border-s-4 border-s-accent' : ''
+                !n.is_read ? "border-s-4 border-s-accent" : ""
               }`}
               onClick={() => !n.is_read && markRead.mutate(n.id)}>
               <div className="flex items-start justify-between gap-2">
@@ -57,7 +57,7 @@ export default function Notifications() {
               </div>
               <div className="text-xs text-muted-foreground mt-1">{n.message}</div>
               <div className="text-xs text-muted-foreground mt-2">
-                {n.created_at?.toDate ? n.created_at.toDate().toLocaleDateString() : ''}
+                {n.created_at?.toDate ? n.created_at.toDate().toLocaleDateString() : ""}
               </div>
             </div>
           ))}

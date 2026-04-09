@@ -1,5 +1,8 @@
 import { Outlet } from "react-router-dom";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { getUnreadNotificationsCount } from "@/lib/firestoreService";
 import AppSidebar from "./AppSidebar";
 import AppTopbar from "./AppTopbar";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -15,6 +18,13 @@ import {
 
 export default function CandidateLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { firebaseUser } = useFirebaseAuth();
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['unread-notifications', firebaseUser?.uid],
+    queryFn: () => getUnreadNotificationsCount(firebaseUser.uid),
+    enabled: !!firebaseUser,
+    refetchInterval: 30000,
+  });
   const { t } = useLanguage();
 
   const links = [
@@ -39,6 +49,7 @@ export default function CandidateLayout() {
         <AppTopbar
           onMenuClick={() => setSidebarOpen(true)}
           notificationsPath="/candidate/notifications"
+          unreadCount={unreadCount}
         />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <Outlet />
