@@ -130,6 +130,8 @@ export default function Login() {
             </svg>
             {loading ? t("common", "loading") : t("auth", "continueWithGoogle")}
           </Button>
+
+          <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div>
               <Label className="text-sm font-medium">{t("auth", "email")}</Label>
               <Input 
