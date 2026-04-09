@@ -10,15 +10,35 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { recordLastLogin } from "@/lib/firestoreService";
-import { auth, db, googleProvider } from "@/lib/firebase";
+import { auth, db, googleProvider, firebaseInitError } from "@/lib/firebase";
+import FirebaseErrorScreen from "@/components/FirebaseErrorScreen";
 
 const FirebaseAuthContext = createContext(null);
 
 export function FirebaseAuthProvider({ children }) {
   const [firebaseUser, setFirebaseUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null); // Firestore users/{uid}
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [needsRoleSetup, setNeedsRoleSetup] = useState(false); // Google new user has no role yet
+  const [needsRoleSetup, setNeedsRoleSetup] = useState(false);
+
+  // Surface Firebase init errors immediately — never crash silently
+  if (firebaseInitError) {
+    return <FirebaseErrorScreen error={firebaseInitError} />;
+  }
+
+  const loadUserProfile = async (user) => {
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      setUserProfile({ uid: user.uid, ...data });
+      setNeedsRoleSetup(false);
+      recordLastLogin(user.uid);
+    } else {
+      setUserProfile(null);
+      setNeedsRoleSetup(true);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -34,21 +54,6 @@ export function FirebaseAuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  const loadUserProfile = async (user) => {
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const data = snap.data();
-      setUserProfile({ uid: user.uid, ...data });
-      setNeedsRoleSetup(false);
-      // Narrow write: only last_login_at, via service layer
-      recordLastLogin(user.uid);
-    } else {
-      setUserProfile(null);
-      setNeedsRoleSetup(true);
-    }
-  };
-
   const signInEmail = async (email, password) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const user = cred.user;
@@ -59,7 +64,6 @@ export function FirebaseAuthProvider({ children }) {
   };
 
   const signUpEmail = async (email, password, fullName, role) => {
-    // Guard: platform_admin cannot be self-assigned via public signup
     const ALLOWED_SIGNUP_ROLES = ["candidate", "employer_owner"];
     if (!ALLOWED_SIGNUP_ROLES.includes(role)) throw new Error("Invalid role selection");
     const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -80,7 +84,6 @@ export function FirebaseAuthProvider({ children }) {
 
   const completeRoleSetup = async (role) => {
     if (!firebaseUser) return;
-    // Guard: platform_admin cannot be self-assigned via role-completion flow
     const ALLOWED_SETUP_ROLES = ["candidate", "employer_owner"];
     if (!ALLOWED_SETUP_ROLES.includes(role)) throw new Error("Invalid role selection");
     const fullName = firebaseUser.displayName || firebaseUser.email;
@@ -90,7 +93,6 @@ export function FirebaseAuthProvider({ children }) {
 
   const createUserDoc = async (user, role, fullName) => {
     const uid = user.uid;
-    // Create users/{uid}
     await setDoc(doc(db, "users", uid), {
       uid,
       email: user.email,
@@ -118,7 +120,6 @@ export function FirebaseAuthProvider({ children }) {
         updated_at: serverTimestamp(),
       });
     } else if (role === "employer_owner") {
-      // Create employer_profiles/{uid}
       const orgRef = doc(db, "organizations", uid + "_org");
       await setDoc(orgRef, {
         name: fullName ? `${fullName}'s Organization` : "My Organization",
@@ -139,7 +140,6 @@ export function FirebaseAuthProvider({ children }) {
         is_primary_contact: true,
         updated_at: serverTimestamp(),
       });
-      // Create organization_members
       await setDoc(doc(db, "organization_members", uid + "_member"), {
         organization_id: orgRef.id,
         user_id: uid,
