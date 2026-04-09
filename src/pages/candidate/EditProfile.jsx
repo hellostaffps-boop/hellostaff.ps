@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -7,21 +7,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Plus, X, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
 import { getCandidateProfile, saveCandidateProfile } from "@/lib/firestoreService";
+import { base44 } from "@/api/base44Client";
+
+const emptyExp = () => ({ title: "", company: "", from: "", to: "", current: false, description: "" });
+const emptyEdu = () => ({ degree: "", institution: "", year: "" });
 
 export default function EditProfile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t } = useLanguage();
   const { firebaseUser } = useFirebaseAuth();
+  const fileInputRef = useRef(null);
+
   const [saving, setSaving] = useState(false);
+  const [uploadingCV, setUploadingCV] = useState(false);
+  const [skillInput, setSkillInput] = useState("");
+
   const [form, setForm] = useState({
     headline: "", bio: "", phone: "", city: "",
-    preferred_roles: [], years_experience: "", availability: "flexible", skills: "",
+    preferred_roles: [], years_experience: "", availability: "flexible",
+    skills: [], cv_url: "",
+    work_experience: [],
+    education: [],
   });
 
   const { data: existing } = useQuery({
@@ -40,7 +54,10 @@ export default function EditProfile() {
         preferred_roles: existing.preferred_roles || [],
         years_experience: existing.years_experience?.toString() || "",
         availability: existing.availability || "flexible",
-        skills: existing.skills?.join(", ") || "",
+        skills: existing.skills || [],
+        cv_url: existing.cv_url || "",
+        work_experience: existing.work_experience || [],
+        education: existing.education || [],
       });
     }
   }, [existing]);
@@ -65,13 +82,55 @@ export default function EditProfile() {
     }));
   };
 
+  const addSkill = () => {
+    const s = skillInput.trim();
+    if (s && !form.skills.includes(s)) {
+      setForm((prev) => ({ ...prev, skills: [...prev.skills, s] }));
+    }
+    setSkillInput("");
+  };
+
+  const removeSkill = (s) => setForm((prev) => ({ ...prev, skills: prev.skills.filter((x) => x !== s) }));
+
+  // Work Experience
+  const addExp = () => setForm((p) => ({ ...p, work_experience: [...p.work_experience, emptyExp()] }));
+  const updateExp = (i, field, val) => setForm((p) => {
+    const arr = [...p.work_experience];
+    arr[i] = { ...arr[i], [field]: val };
+    return { ...p, work_experience: arr };
+  });
+  const removeExp = (i) => setForm((p) => ({ ...p, work_experience: p.work_experience.filter((_, idx) => idx !== i) }));
+
+  // Education
+  const addEdu = () => setForm((p) => ({ ...p, education: [...p.education, emptyEdu()] }));
+  const updateEdu = (i, field, val) => setForm((p) => {
+    const arr = [...p.education];
+    arr[i] = { ...arr[i], [field]: val };
+    return { ...p, education: arr };
+  });
+  const removeEdu = (i) => setForm((p) => ({ ...p, education: p.education.filter((_, idx) => idx !== i) }));
+
+  // CV Upload
+  const handleCVUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCV(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm((p) => ({ ...p, cv_url: file_url }));
+      toast.success(t("editProfile", "cvUploaded") || "CV uploaded");
+    } catch {
+      toast.error(t("editProfile", "cvUploadError") || "Upload failed");
+    }
+    setUploadingCV(false);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const data = {
       ...form,
       user_id: firebaseUser.uid,
       years_experience: form.years_experience ? Number(form.years_experience) : 0,
-      skills: form.skills ? form.skills.split(",").map((s) => s.trim()).filter(Boolean) : [],
     };
     await saveCandidateProfile(firebaseUser.uid, data);
     queryClient.invalidateQueries({ queryKey: ["my-candidate-profile"] });
@@ -80,27 +139,30 @@ export default function EditProfile() {
     navigate("/candidate/profile");
   };
 
+  const sectionClass = "bg-white rounded-2xl border border-border p-6 space-y-4";
+
   return (
     <div>
       <PageHeader
-        title={existing ? t("editProfile", "editTitle") : t("editProfile", "createTitle")}
+        title={existing?.headline ? t("editProfile", "editTitle") : t("editProfile", "createTitle")}
         description={t("editProfile", "description")}
       />
 
-      <div className="bg-white rounded-2xl border border-border p-8 max-w-2xl">
-        <div className="space-y-6">
+      <div className="max-w-2xl space-y-4">
+
+        {/* Personal Info */}
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm">{t("editProfile", "personalInfo") || "Personal Information"}</h3>
           <div>
             <Label className="text-sm">{t("editProfile", "headline")}</Label>
             <Input placeholder={t("editProfile", "headlinePlaceholder")} value={form.headline}
               onChange={(e) => setForm({ ...form, headline: e.target.value })} className="mt-1.5" />
           </div>
-
           <div>
             <Label className="text-sm">{t("editProfile", "aboutMe")}</Label>
             <Textarea placeholder={t("editProfile", "aboutMePlaceholder")} value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })} rows={4} className="mt-1.5 resize-none" />
           </div>
-
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-sm">{t("editProfile", "phone")}</Label>
@@ -113,7 +175,149 @@ export default function EditProfile() {
                 onChange={(e) => setForm({ ...form, city: e.target.value })} className="mt-1.5" />
             </div>
           </div>
+        </div>
 
+        {/* CV Upload */}
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm">{t("editProfile", "cvSection") || "CV / Resume"}</h3>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" size="sm" className="gap-2" disabled={uploadingCV}
+              onClick={() => fileInputRef.current?.click()}>
+              {uploadingCV ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {t("editProfile", "uploadCV") || "Upload CV"}
+            </Button>
+            {form.cv_url && (
+              <a href={form.cv_url} target="_blank" rel="noreferrer"
+                className="text-sm text-accent hover:underline truncate max-w-xs">
+                {t("editProfile", "viewCV") || "View CV"}
+              </a>
+            )}
+            <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleCVUpload} />
+          </div>
+          <p className="text-xs text-muted-foreground">{t("editProfile", "cvHint") || "PDF, DOC, DOCX accepted"}</p>
+        </div>
+
+        {/* Skills */}
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm">{t("editProfile", "skills")}</h3>
+          <div className="flex gap-2">
+            <Input
+              placeholder={t("editProfile", "addSkillPlaceholder") || "Add a skill..."}
+              value={skillInput}
+              onChange={(e) => setSkillInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
+              className="flex-1"
+            />
+            <Button type="button" variant="outline" size="sm" onClick={addSkill}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+          {form.skills.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {form.skills.map((s) => (
+                <Badge key={s} variant="secondary" className="gap-1 pe-1">
+                  {s}
+                  <button onClick={() => removeSkill(s)} className="ms-1 hover:text-destructive"><X className="w-3 h-3" /></button>
+                </Badge>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">{t("editProfile", "skillsHint")}</p>
+        </div>
+
+        {/* Work Experience */}
+        <div className={sectionClass}>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-sm">{t("editProfile", "workExperience") || "Work Experience"}</h3>
+            <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addExp}>
+              <Plus className="w-4 h-4" /> {t("editProfile", "addExperience") || "Add"}
+            </Button>
+          </div>
+          {form.work_experience.map((exp, i) => (
+            <div key={i} className="border border-border rounded-xl p-4 space-y-3 relative">
+              <button onClick={() => removeExp(i)}
+                className="absolute top-3 end-3 text-muted-foreground hover:text-destructive">
+                <X className="w-4 h-4" />
+              </button>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">{t("editProfile", "jobTitle") || "Job Title"}</Label>
+                  <Input value={exp.title} onChange={(e) => updateExp(i, "title", e.target.value)}
+                    placeholder={t("editProfile", "jobTitlePlaceholder") || "e.g. Head Barista"} className="mt-1 h-9 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">{t("editProfile", "company") || "Company"}</Label>
+                  <Input value={exp.company} onChange={(e) => updateExp(i, "company", e.target.value)}
+                    placeholder={t("editProfile", "companyPlaceholder") || "Company name"} className="mt-1 h-9 text-sm" />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">{t("editProfile", "from") || "From"}</Label>
+                  <Input type="month" value={exp.from} onChange={(e) => updateExp(i, "from", e.target.value)} className="mt-1 h-9 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">{t("editProfile", "to") || "To"}</Label>
+                  <Input type="month" value={exp.to} disabled={exp.current} onChange={(e) => updateExp(i, "to", e.target.value)} className="mt-1 h-9 text-sm" />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={exp.current} onCheckedChange={(v) => updateExp(i, "current", v)} />
+                {t("editProfile", "currentRole") || "I currently work here"}
+              </label>
+              <div>
+                <Label className="text-xs">{t("editProfile", "description") || "Description"}</Label>
+                <Textarea value={exp.description} onChange={(e) => updateExp(i, "description", e.target.value)}
+                  rows={2} className="mt-1 resize-none text-sm" placeholder={t("editProfile", "expDescPlaceholder") || "Describe your responsibilities..."} />
+              </div>
+            </div>
+          ))}
+          {form.work_experience.length === 0 && (
+            <p className="text-sm text-muted-foreground">{t("editProfile", "noExperience") || "No experience added yet."}</p>
+          )}
+        </div>
+
+        {/* Education */}
+        <div className={sectionClass}>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-sm">{t("editProfile", "education") || "Education"}</h3>
+            <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addEdu}>
+              <Plus className="w-4 h-4" /> {t("editProfile", "addEducation") || "Add"}
+            </Button>
+          </div>
+          {form.education.map((edu, i) => (
+            <div key={i} className="border border-border rounded-xl p-4 space-y-3 relative">
+              <button onClick={() => removeEdu(i)}
+                className="absolute top-3 end-3 text-muted-foreground hover:text-destructive">
+                <X className="w-4 h-4" />
+              </button>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">{t("editProfile", "degree") || "Degree / Qualification"}</Label>
+                  <Input value={edu.degree} onChange={(e) => updateEdu(i, "degree", e.target.value)}
+                    placeholder={t("editProfile", "degreePlaceholder") || "e.g. Bachelor of Hospitality"} className="mt-1 h-9 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">{t("editProfile", "institution") || "Institution"}</Label>
+                  <Input value={edu.institution} onChange={(e) => updateEdu(i, "institution", e.target.value)}
+                    placeholder={t("editProfile", "institutionPlaceholder") || "School / University"} className="mt-1 h-9 text-sm" />
+                </div>
+              </div>
+              <div className="w-32">
+                <Label className="text-xs">{t("editProfile", "graduationYear") || "Year"}</Label>
+                <Input type="number" value={edu.year} onChange={(e) => updateEdu(i, "year", e.target.value)}
+                  placeholder="2024" className="mt-1 h-9 text-sm" />
+              </div>
+            </div>
+          ))}
+          {form.education.length === 0 && (
+            <p className="text-sm text-muted-foreground">{t("editProfile", "noEducation") || "No education added yet."}</p>
+          )}
+        </div>
+
+        {/* Job Preferences */}
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm">{t("editProfile", "jobPreferences") || "Job Preferences"}</h3>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-sm">{t("editProfile", "yearsExp")}</Label>
@@ -133,7 +337,6 @@ export default function EditProfile() {
               </Select>
             </div>
           </div>
-
           <div>
             <Label className="text-sm mb-3 block">{t("editProfile", "jobCategories")}</Label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -146,23 +349,19 @@ export default function EditProfile() {
               ))}
             </div>
           </div>
-
-          <div>
-            <Label className="text-sm">{t("editProfile", "skills")}</Label>
-            <Input placeholder={t("editProfile", "skillsPlaceholder")} value={form.skills}
-              onChange={(e) => setForm({ ...form, skills: e.target.value })} className="mt-1.5" />
-            <p className="text-xs text-muted-foreground mt-1">{t("editProfile", "skillsHint")}</p>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? t("editProfile", "saving") : t("editProfile", "saveProfile")}
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/candidate/profile")}>
-              {t("editProfile", "cancel")}
-            </Button>
-          </div>
         </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 pb-8">
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {saving ? t("editProfile", "saving") : t("editProfile", "saveProfile")}
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/candidate/profile")}>
+            {t("editProfile", "cancel")}
+          </Button>
+        </div>
+
       </div>
     </div>
   );

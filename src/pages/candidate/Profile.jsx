@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { User, MapPin, Phone, Mail, Edit } from "lucide-react";
+import { User, MapPin, Phone, Mail, Edit, Briefcase, GraduationCap, FileText, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
@@ -22,6 +22,13 @@ export default function Profile() {
     cleaner: t("jobCard", "typeCleaner"),
     kitchen_helper: t("jobCard", "typeKitchenHelper"),
     restaurant_manager: t("jobCard", "typeManager"),
+  };
+
+  const availabilityLabel = {
+    full_time: t("editProfile", "fullTime"),
+    part_time: t("editProfile", "partTime"),
+    flexible: t("editProfile", "flexible"),
+    weekends_only: t("editProfile", "weekendsOnly"),
   };
 
   const { data: profile, isLoading } = useQuery({
@@ -48,6 +55,8 @@ export default function Profile() {
     );
   }
 
+  const sectionClass = "bg-white rounded-2xl border border-border p-6 mb-4";
+
   return (
     <div>
       <PageHeader title={t("profile", "title")}>
@@ -58,63 +67,125 @@ export default function Profile() {
         </Link>
       </PageHeader>
 
-      <div className="bg-white rounded-2xl border border-border p-8">
-        <div className="flex flex-col sm:flex-row items-start gap-6 mb-8">
-          <div className="w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center">
+      {/* Header card */}
+      <div className={sectionClass}>
+        <div className="flex flex-col sm:flex-row items-start gap-6">
+          <div className="w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center shrink-0">
             <User className="w-8 h-8 text-muted-foreground" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold">{profile.headline || t("profile", "defaultHeadline")}</h2>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold">{profile.headline}</h2>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
               {profile.city && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {profile.city}</span>}
               {profile.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {profile.phone}</span>}
               <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {firebaseUser?.email}</span>
             </div>
+            <div className="flex gap-4 mt-4 text-sm">
+              {profile.years_experience != null && (
+                <span className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{profile.years_experience}</span>{" "}
+                  {t("profile", "experienceYears")}
+                </span>
+              )}
+              {profile.availability && (
+                <span className="text-muted-foreground">
+                  {availabilityLabel[profile.availability] || profile.availability}
+                </span>
+              )}
+            </div>
           </div>
+          {profile.cv_url && (
+            <a href={profile.cv_url} target="_blank" rel="noreferrer">
+              <Button size="sm" variant="outline" className="gap-2 shrink-0">
+                <FileText className="w-4 h-4" />
+                {t("editProfile", "viewCV") || "View CV"}
+                <ExternalLink className="w-3 h-3" />
+              </Button>
+            </a>
+          )}
         </div>
 
         {profile.bio && (
-          <div className="mb-8">
+          <div className="mt-6">
             <h3 className="font-semibold text-sm mb-2">{t("profile", "about")}</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
           </div>
         )}
-
-        {profile.preferred_roles?.length > 0 && (
-          <div className="mb-8">
-            <h3 className="font-semibold text-sm mb-3">{t("profile", "jobCategories")}</h3>
-            <div className="flex flex-wrap gap-2">
-              {profile.preferred_roles.map((type) => (
-                <Badge key={type} variant="secondary">{typeLabels[type] || type}</Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {profile.skills?.length > 0 && (
-          <div className="mb-8">
-            <h3 className="font-semibold text-sm mb-3">{t("profile", "skills")}</h3>
-            <div className="flex flex-wrap gap-2">
-              {profile.skills.map((s) => <Badge key={s} variant="outline">{s}</Badge>)}
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-8 text-sm">
-          {profile.years_experience != null && (
-            <div>
-              <div className="text-muted-foreground">{t("profile", "experience")}</div>
-              <div className="font-semibold">{profile.years_experience} {t("profile", "experienceYears")}</div>
-            </div>
-          )}
-          {profile.availability && (
-            <div>
-              <div className="text-muted-foreground">{t("profile", "availability")}</div>
-              <div className="font-semibold">{t("status", profile.availability) || profile.availability}</div>
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* Skills */}
+      {profile.skills?.length > 0 && (
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm mb-3">{t("profile", "skills")}</h3>
+          <div className="flex flex-wrap gap-2">
+            {profile.skills.map((s) => <Badge key={s} variant="outline">{s}</Badge>)}
+          </div>
+        </div>
+      )}
+
+      {/* Job Preferences */}
+      {profile.preferred_roles?.length > 0 && (
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm mb-3">{t("profile", "jobCategories")}</h3>
+          <div className="flex flex-wrap gap-2">
+            {profile.preferred_roles.map((type) => (
+              <Badge key={type} variant="secondary">{typeLabels[type] || type}</Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Work Experience */}
+      {profile.work_experience?.length > 0 && (
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+            <Briefcase className="w-4 h-4" /> {t("editProfile", "workExperience") || "Work Experience"}
+          </h3>
+          <div className="space-y-4">
+            {profile.work_experience.map((exp, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-0.5">
+                  <Briefcase className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <div className="font-semibold text-sm">{exp.title}</div>
+                  <div className="text-sm text-muted-foreground">{exp.company}</div>
+                  {(exp.from || exp.to) && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {exp.from} {exp.to || exp.current ? "—" : ""} {exp.current ? (t("editProfile", "present") || "Present") : exp.to}
+                    </div>
+                  )}
+                  {exp.description && <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{exp.description}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Education */}
+      {profile.education?.length > 0 && (
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" /> {t("editProfile", "education") || "Education"}
+          </h3>
+          <div className="space-y-4">
+            {profile.education.map((edu, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-0.5">
+                  <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <div className="font-semibold text-sm">{edu.degree}</div>
+                  <div className="text-sm text-muted-foreground">{edu.institution}</div>
+                  {edu.year && <div className="text-xs text-muted-foreground mt-0.5">{edu.year}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
