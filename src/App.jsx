@@ -19,6 +19,8 @@ import BrowseJobs from './pages/BrowseJobs';
 import JobDetails from './pages/JobDetails';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import CandidateDashboard from './pages/candidate/Dashboard';
 import CandidateProfile from './pages/candidate/Profile';
 import EditProfile from './pages/candidate/EditProfile';
@@ -51,6 +53,8 @@ const AuthenticatedApp = () => {
         <Route path="/jobs/:id" element={<JobDetails />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
       </Route>
 
       {/* Candidate routes */}
