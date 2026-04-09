@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { PlusCircle, Search, Briefcase } from "lucide-react";
+import JobShareMenu from "@/components/JobShareMenu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,8 @@ const STATUS_COLORS = {
 const STATUS_TABS = ["all", "published", "draft", "closed"];
 
 export default function ManageJobs() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const ar = lang === "ar";
   const { firebaseUser } = useFirebaseAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -147,6 +149,7 @@ export default function ManageJobs() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  <JobShareMenu job={job} ar={ar} />
                   <Link to={`/jobs/${job.id}`}>
                     <Button size="sm" variant="ghost" className="h-8 text-xs">{t("common", "view")}</Button>
                   </Link>
