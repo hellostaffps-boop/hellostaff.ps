@@ -1,171 +1,215 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, FileText, Calendar, MapPin, Briefcase } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ExternalLink, FileText, Mail, Phone, MapPin, Clock, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getApplicationById, updateApplicationStatus, getApplicationEvaluation } from "@/lib/firestoreService";
+import { getApplicationById, getApplicationEvaluation } from "@/lib/firestoreService";
 import InternalNotesSection from "@/components/InternalNotesSection";
 import EvaluationCard from "@/components/EvaluationCard";
 
 const STATUS_COLORS = {
-  submitted: "bg-yellow-50 text-yellow-700 border-yellow-200",
-  reviewing: "bg-blue-50 text-blue-700 border-blue-200",
-  shortlisted: "bg-purple-50 text-purple-700 border-purple-200",
-  interview: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  offered: "bg-green-50 text-green-700 border-green-200",
-  rejected: "bg-red-50 text-red-700 border-red-200",
-  withdrawn: "bg-gray-50 text-gray-700 border-gray-200",
-  hired: "bg-green-50 text-green-700 border-green-200",
+  submitted: "bg-slate-100 text-slate-800 border-slate-300",
+  reviewing: "bg-blue-100 text-blue-800 border-blue-300",
+  shortlisted: "bg-green-100 text-green-800 border-green-300",
+  interview: "bg-purple-100 text-purple-800 border-purple-300",
+  offered: "bg-yellow-100 text-yellow-800 border-yellow-300",
+  rejected: "bg-red-100 text-red-800 border-red-300",
+  withdrawn: "bg-gray-100 text-gray-800 border-gray-300",
+  hired: "bg-emerald-100 text-emerald-800 border-emerald-300",
 };
 
 export default function EmployerApplicationDetail() {
-  const { id } = useParams();
+  const { id: applicationId } = useParams();
   const navigate = useNavigate();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
+  const { lang } = useLanguage();
   const { firebaseUser } = useFirebaseAuth();
-  const queryClient = useQueryClient();
-  const [newStatus, setNewStatus] = useState(null);
+  const isArabic = lang === "ar";
 
-  const { data: app, isLoading } = useQuery({
-    queryKey: ["application-detail", id],
-    queryFn: () => getApplicationById(id),
+  const { data: application } = useQuery({
+    queryKey: ["application-detail", applicationId],
+    queryFn: () => getApplicationById(applicationId),
+    enabled: !!applicationId,
   });
 
-  useEffect(() => {
-    if (app) setNewStatus(app.status);
-  }, [app]);
-
-  const { data: evals = [] } = useQuery({
-    queryKey: ["application-evaluations", id],
-    queryFn: () => getApplicationEvaluation(id),
-    enabled: !!id,
+  const { data: evaluations = [] } = useQuery({
+    queryKey: ["app-evaluation", applicationId],
+    queryFn: () => getApplicationEvaluation(applicationId),
+    enabled: !!applicationId,
   });
 
-  const statusMutation = useMutation({
-    mutationFn: async (status) => {
-      await updateApplicationStatus(firebaseUser.uid, id, status);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["application-detail", id] });
-    },
-  });
+  if (!application) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="text-center">
+          <div className="h-8 w-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">{isArabic ? "جارٍ التحميل..." : "Loading..."}</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (isLoading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" /></div>;
-  if (!app) return <div className="p-4">{lang === "ar" ? "لم يتم العثور على الطلب" : "Application not found"}</div>;
+  const recommendationBadges = {
+    strong_yes: { color: "bg-green-100 text-green-800 border-green-300", label: isArabic ? "نعم بقوة" : "Strong Yes" },
+    yes: { color: "bg-blue-100 text-blue-800 border-blue-300", label: isArabic ? "نعم" : "Yes" },
+    maybe: { color: "bg-amber-100 text-amber-800 border-amber-300", label: isArabic ? "ربما" : "Maybe" },
+    no: { color: "bg-red-100 text-red-800 border-red-300", label: isArabic ? "لا" : "No" },
+  };
+
+  const latestEvaluation = evaluations.length > 0 ? evaluations[0] : null;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div>
       {/* Header */}
-      <div className="mb-6">
-        <Link to="/employer/applications" className="flex items-center gap-2 text-sm text-accent hover:underline mb-4">
-          <ChevronLeft className="w-4 h-4" />
-          {lang === "ar" ? "العودة إلى الطلبات" : "Back to Applications"}
-        </Link>
-        <div className="bg-white rounded-lg border border-border p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold">{app.candidate_name}</h1>
-              <p className="text-muted-foreground mt-1">{app.job_title} · {app.organization_name}</p>
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => navigate("/employer/applications")}
+          className="p-2 hover:bg-secondary rounded-lg transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">{application.candidate_name || application.candidate_email}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{application.job_title}</p>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Main content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Application card */}
+          <div className="bg-white rounded-xl border border-border p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="font-semibold text-sm text-muted-foreground">
+                  {isArabic ? "حالة التقديم" : "Application Status"}
+                </h2>
+                <Badge className={`mt-2 ${STATUS_COLORS[application.status] || STATUS_COLORS.submitted}`}>
+                  {t("status", application.status) || application.status}
+                </Badge>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {application.applied_at?.toDate
+                  ? new Date(application.applied_at.toDate()).toLocaleDateString(
+                      isArabic ? "ar-SA" : "en-GB",
+                      { dateStyle: "medium" }
+                    )
+                  : ""}
+              </span>
             </div>
-            <Badge className={`text-sm border ${STATUS_COLORS[app.status]}`}>
-              {t("status", app.status) || app.status}
-            </Badge>
+
+            {/* Contact info */}
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="flex items-center gap-3 text-sm">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <a href={`mailto:${application.candidate_email}`} className="text-accent hover:underline">
+                  {application.candidate_email}
+                </a>
+              </div>
+            </div>
+
+            {/* Resume */}
+            {application.resume_url && (
+              <div className="border-t border-border mt-4 pt-4">
+                <a
+                  href={application.resume_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-accent hover:underline"
+                >
+                  <FileText className="w-4 h-4" />
+                  {isArabic ? "عرض السيرة الذاتية" : "View Resume"}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+
+            {/* Cover letter */}
+            {application.cover_letter && (
+              <div className="border-t border-border mt-4 pt-4">
+                <h3 className="text-xs font-semibold mb-2">{isArabic ? "خطاب الغلاف" : "Cover Letter"}</h3>
+                <p className="text-xs text-foreground whitespace-pre-wrap break-words bg-secondary/30 rounded-lg p-3">
+                  {application.cover_letter}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Candidate Info */}
-          <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-            <div>
-              <p className="text-muted-foreground">{lang === "ar" ? "البريد الإلكتروني" : "Email"}</p>
-              <p className="font-medium">{app.candidate_email}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">{lang === "ar" ? "تاريخ التقديم" : "Applied"}</p>
-              <p className="font-medium">{new Date(app.applied_at?.toDate?.() || app.applied_at).toLocaleDateString(lang === "ar" ? "ar-SA" : "en-GB")}</p>
-            </div>
-          </div>
+          {/* Internal Notes */}
+          <InternalNotesSection applicationId={applicationId} organizationId={application.organization_id} />
 
-          {/* Resume & Cover Letter */}
-          <div className="flex gap-3">
-            {app.resume_url && (
-              <a href={app.resume_url} target="_blank" rel="noopener noreferrer" className="text-accent text-sm hover:underline flex items-center gap-1">
-                <FileText className="w-4 h-4" />
-                {lang === "ar" ? "السيرة الذاتية" : "Resume"}
-              </a>
+          {/* Evaluation */}
+          <EvaluationCard applicationId={applicationId} organizationId={application.organization_id} />
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Evaluation summary if exists */}
+          {latestEvaluation && (
+            <div className="bg-white rounded-xl border border-border p-4">
+              <h3 className="font-semibold text-sm mb-3">{isArabic ? "ملخص التقييم" : "Evaluation Summary"}</h3>
+              
+              {/* Score */}
+              <div className="mb-3">
+                <div className="text-xs text-muted-foreground mb-1">{isArabic ? "التقييم" : "Score"}</div>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <span key={s} className={`w-2 h-2 rounded-full ${s <= latestEvaluation.overall_score ? "bg-accent" : "bg-muted"}`} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Recommendation */}
+              <div className="mb-3">
+                <div className="text-xs text-muted-foreground mb-1">{isArabic ? "التوصية" : "Recommendation"}</div>
+                <Badge className={`${recommendationBadges[latestEvaluation.recommendation]?.color}`}>
+                  {recommendationBadges[latestEvaluation.recommendation]?.label}
+                </Badge>
+              </div>
+
+              {/* Tags */}
+              {latestEvaluation.tags?.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs text-muted-foreground mb-1">{isArabic ? "الوسوم" : "Tags"}</div>
+                  <div className="flex flex-wrap gap-1">
+                    {latestEvaluation.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reviewer */}
+              <div className="text-xs text-muted-foreground border-t border-border pt-3">
+                {isArabic ? "من قبل: " : "By: "} {latestEvaluation.reviewer_name}
+              </div>
+            </div>
+          )}
+
+          {/* Quick info */}
+          <div className="bg-secondary/30 rounded-xl p-4 text-xs space-y-2">
+            <div>
+              <span className="text-muted-foreground">{isArabic ? "المنظمة:" : "Organization:"}</span>
+              <div className="font-medium">{application.organization_name}</div>
+            </div>
+            {application.applied_at && (
+              <div>
+                <span className="text-muted-foreground">{isArabic ? "تاريخ التقديم:" : "Applied:"}</span>
+                <div className="font-medium">
+                  {new Date(application.applied_at.toDate()).toLocaleDateString(
+                    isArabic ? "ar-SA" : "en-GB",
+                    { dateStyle: "medium" }
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* Status Management */}
-      <div className="bg-white rounded-lg border border-border p-4 mb-6">
-        <h3 className="font-semibold text-sm mb-3">{lang === "ar" ? "تحديث الحالة" : "Update Status"}</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {["reviewing", "shortlisted", "interview", "offered", "rejected", "hired"].map(status => (
-            <button
-              key={status}
-              onClick={() => {
-                setNewStatus(status);
-                statusMutation.mutate(status);
-              }}
-              disabled={statusMutation.isPending}
-              className={`p-2 rounded text-xs font-medium transition-all ${
-                app.status === status
-                  ? STATUS_COLORS[status] + " ring-2 ring-accent"
-                  : STATUS_COLORS[status]
-              }`}
-            >
-              {t("status", status) || status}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Evaluation */}
-      <div className="mb-6">
-        <EvaluationCard
-          applicationId={id}
-          organizationId={app.organization_id}
-          existingEval={evals[0]}
-        />
-      </div>
-
-      {/* Internal Notes */}
-      <div className="mb-6">
-        <InternalNotesSection
-          applicationId={id}
-          organizationId={app.organization_id}
-        />
-      </div>
-
-      {/* Evaluations Summary */}
-      {evals.length > 0 && (
-        <div className="bg-white rounded-lg border border-border p-4">
-          <h4 className="font-semibold text-sm mb-4">{lang === "ar" ? "التقييمات" : "Evaluations"}</h4>
-          <div className="space-y-3">
-            {evals.map(evaluation => (
-              <div key={evaluation.id} className="border-l-4 border-accent pl-3 py-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-sm">{evaluation.reviewer_name}</span>
-                  <span className="text-xs text-muted-foreground">{evaluation.overall_score}/5</span>
-                </div>
-                {evaluation.tags?.length > 0 && (
-                                   <div className="flex flex-wrap gap-1 mb-2">
-                                     {evaluation.tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                    ))}
-                  </div>
-                )}
-                {evaluation.recommendation && (
-                                   <Badge className="text-xs">{evaluation.recommendation}</Badge>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -50,7 +50,7 @@ export default function Dashboard() {
     enabled: !!orgId,
   });
 
-  const { data: reviewSummary = {} } = useQuery({
+  const { data: reviewSummary = { reviewingCount: 0, shortlistedCount: 0 } } = useQuery({
     queryKey: ["hiring-review-summary", firebaseUser?.uid],
     queryFn: () => getEmployerHiringReviewSummary(firebaseUser.uid),
     enabled: !!firebaseUser,
@@ -72,8 +72,8 @@ export default function Dashboard() {
   const stats = [
     { icon: Briefcase, label: t("dashboard", "activeJobs"), value: jobs.filter((j) => j.status === "published").length },
     { icon: FileText, label: t("dashboard", "totalApplications"), value: applications.length },
-    { icon: Users, label: language === "ar" ? "قيد المراجعة" : "Under Review", value: reviewSummary.reviewingCount || 0 },
-    { icon: Eye, label: t("status", "shortlisted"), value: reviewSummary.shortlistedCount || 0 },
+    { icon: Users, label: language === "ar" ? "قيد المراجعة" : "Under Review", value: reviewSummary?.reviewingCount || 0 },
+    { icon: Eye, label: t("status", "shortlisted"), value: reviewSummary?.shortlistedCount || 0 },
   ];
 
   // Suggested next actions for owner

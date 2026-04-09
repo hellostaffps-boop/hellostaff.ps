@@ -1,124 +1,137 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, Trash2 } from "lucide-react";
+import { MessageCircle, Trash2, Edit2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/useLanguage";
-import { getApplicationInternalNotes, createApplicationInternalNote, updateApplicationInternalNote } from "@/lib/firestoreService";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { getApplicationInternalNotes, createApplicationInternalNote, updateApplicationInternalNote } from "@/lib/firestoreService";
 
 export default function InternalNotesSection({ applicationId, organizationId }) {
-  const { t, lang } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { t } = useLanguage();
+  const { lang } = useLanguage();
+  const { firebaseUser, userProfile } = useFirebaseAuth();
   const queryClient = useQueryClient();
-  const [newNote, setNewNote] = useState("");
+
+  const [noteInput, setNoteInput] = useState("");
   const [editingId, setEditingId] = useState(null);
-  const [editText, setEditText] = useState("");
+  const [editingText, setEditingText] = useState("");
 
-  const { data: notes = [], isLoading } = useQuery({
-    queryKey: ["internal-notes", applicationId],
+  const { data: notes = [] } = useQuery({
+    queryKey: ["app-notes", applicationId],
     queryFn: () => getApplicationInternalNotes(applicationId),
+    enabled: !!applicationId,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      if (!newNote.trim()) return;
-      await createApplicationInternalNote(applicationId, organizationId, {
+  const createNoteMutation = useMutation({
+    mutationFn: () => 
+      createApplicationInternalNote(applicationId, organizationId, {
         author_email: firebaseUser.email,
-        author_name: firebaseUser.displayName || firebaseUser.email,
-        body: newNote,
-      });
-      setNewNote("");
-    },
+        author_name: userProfile?.full_name || firebaseUser.email,
+        body: noteInput,
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["internal-notes", applicationId] });
+      setNoteInput("");
+      queryClient.invalidateQueries({ queryKey: ["app-notes", applicationId] });
     },
   });
 
-  const editMutation = useMutation({
-    mutationFn: async (noteId) => {
-      if (!editText.trim()) return;
-      await updateApplicationInternalNote(noteId, { body: editText });
+  const updateNoteMutation = useMutation({
+    mutationFn: () => updateApplicationInternalNote(editingId, { body: editingText }),
+    onSuccess: () => {
       setEditingId(null);
-      setEditText("");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["internal-notes", applicationId] });
+      queryClient.invalidateQueries({ queryKey: ["app-notes", applicationId] });
     },
   });
 
-  if (isLoading) return <div className="py-4 text-sm text-muted-foreground">{lang === "ar" ? "جاري التحميل..." : "Loading..."}</div>;
+  const isArabic = lang === "ar";
 
   return (
-    <div className="bg-white rounded-lg border border-border p-4">
-      <h4 className="font-semibold text-sm mb-4">
-        {lang === "ar" ? "ملاحظات داخلية (للموظفين فقط)" : "Internal Notes (Staff Only)"}
-      </h4>
+    <div className={`bg-white rounded-xl border border-border p-4 ${isArabic ? "rtl" : "ltr"}`}>
+      <div className="flex items-center gap-2 mb-4">
+        <MessageCircle className="w-4 h-4 text-accent" />
+        <h3 className="font-semibold text-sm">{isArabic ? "ملاحظات داخلية" : "Internal Notes"}</h3>
+      </div>
 
       {/* Notes list */}
-      <div className="space-y-3 mb-4">
-        {notes.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{lang === "ar" ? "لا توجد ملاحظات حتى الآن" : "No notes yet"}</p>
-        ) : (
-          notes.map(note => (
-            <div key={note.id} className="bg-slate-50 rounded p-3 border border-slate-200 text-sm">
+      {notes.length > 0 ? (
+        <div className="space-y-3 mb-4">
+          {notes.map((note) => (
+            <div key={note.id} className="bg-secondary/50 rounded-lg p-3 text-xs">
               {editingId === note.id ? (
                 <div className="space-y-2">
                   <textarea
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    className="w-full p-2 border border-input rounded text-xs"
-                    rows="3"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    className="w-full min-h-20 p-2 border border-border rounded-md text-xs resize-none"
+                    placeholder={isArabic ? "حرر الملاحظة..." : "Edit note..."}
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => editMutation.mutate(note.id)} disabled={editMutation.isPending}>
-                      {lang === "ar" ? "حفظ" : "Save"}
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => updateNoteMutation.mutate()}
+                      disabled={updateNoteMutation.isPending}
+                    >
+                      {isArabic ? "حفظ" : "Save"}
                     </Button>
-                    <button onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">
-                      {lang === "ar" ? "إلغاء" : "Cancel"}
-                    </button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingId(null)}
+                    >
+                      {isArabic ? "إلغاء" : "Cancel"}
+                    </Button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <p className="text-slate-700 mb-1">{note.body}</p>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{note.author_name} · {new Date(note.created_at?.toDate?.() || note.created_at).toLocaleDateString(lang === "ar" ? "ar-SA" : "en-GB")}</span>
-                    {note.author_email === firebaseUser?.email && (
+                  <div className="mb-1">
+                    <span className="font-medium">{note.author_name}</span>
+                    <span className="text-muted-foreground ms-2">
+                      {note.created_at?.toDate ? new Date(note.created_at.toDate()).toLocaleString(
+                        isArabic ? "ar-SA" : "en-GB",
+                        { dateStyle: "short", timeStyle: "short" }
+                      ) : ""}
+                    </span>
+                  </div>
+                  <p className="text-foreground whitespace-pre-wrap break-words mb-2">{note.body}</p>
+                  {note.author_email === firebaseUser.email && (
+                    <div className="flex gap-1">
                       <button
                         onClick={() => {
                           setEditingId(note.id);
-                          setEditText(note.body);
+                          setEditingText(note.body);
                         }}
-                        className="text-accent hover:underline"
+                        className="p-1 hover:bg-secondary rounded transition-colors"
                       >
-                        {lang === "ar" ? "تعديل" : "Edit"}
+                        <Edit2 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground mb-4">{isArabic ? "لا توجد ملاحظات حتى الآن" : "No notes yet"}</p>
+      )}
 
-      {/* New note input */}
-      <div className="border-t border-border pt-4">
+      {/* Note input */}
+      <div className="space-y-2">
         <textarea
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          placeholder={lang === "ar" ? "أضف ملاحظة..." : "Add a note..."}
-          className="w-full p-2 border border-input rounded text-xs mb-2"
-          rows="3"
+          value={noteInput}
+          onChange={(e) => setNoteInput(e.target.value)}
+          placeholder={isArabic ? "أضف ملاحظة داخلية..." : "Add an internal note..."}
+          className="w-full min-h-20 p-2 border border-border rounded-md text-xs resize-none"
         />
         <Button
           size="sm"
-          onClick={() => createMutation.mutate()}
-          disabled={createMutation.isPending || !newNote.trim()}
-          className="w-full gap-2"
+          onClick={() => createNoteMutation.mutate()}
+          disabled={!noteInput.trim() || createNoteMutation.isPending}
+          className="bg-accent text-accent-foreground hover:bg-accent/90"
         >
-          <Send className="w-3 h-3" />
-          {lang === "ar" ? "إضافة ملاحظة" : "Add Note"}
+          {createNoteMutation.isPending ? (isArabic ? "جارٍ الإضافة..." : "Adding...") : (isArabic ? "إضافة" : "Add Note")}
         </Button>
       </div>
     </div>
