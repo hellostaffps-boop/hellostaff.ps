@@ -63,8 +63,11 @@ export function FirebaseAuthProvider({ children }) {
 
   const signInGoogle = async () => {
     const cred = await signInWithPopup(auth, googleProvider);
-    // loadUserProfile will be called by onAuthStateChanged
-    return cred.user;
+    const user = cred.user;
+    // Check if Firestore doc exists (determines new vs returning user)
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+    return { user, isNewUser: !snap.exists() };
   };
 
   const completeRoleSetup = async (role) => {

@@ -54,11 +54,16 @@ export default function SignUp() {
     setError("");
     setLoading(true);
     try {
-      await signInGoogle();
-      // Role setup will be handled in RoleCompletion if no profile exists
-      navigate("/");
+      const { isNewUser } = await signInGoogle();
+      if (isNewUser) {
+        navigate("/auth/complete-profile", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (err) {
-      setError(getAuthErrorMessage(err.code, t));
+      if (err.code !== "auth/popup-closed-by-user") {
+        setError(getAuthErrorMessage(err.code, t));
+      }
       setLoading(false);
     }
   };
