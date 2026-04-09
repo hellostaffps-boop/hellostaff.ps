@@ -38,6 +38,9 @@ import CompanyProfile from './pages/employer/CompanyProfile';
 import EmployerNotifications from './pages/employer/Notifications';
 import TeamMembers from './pages/employer/TeamMembers';
 import ApplicationChat from './pages/ApplicationChat';
+import AdminPage from './pages/admin/AdminPage';
+import AdminDashboard from './pages/admin/Dashboard';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
 
 const AuthenticatedApp = () => {
   return (
@@ -90,10 +93,16 @@ const AuthenticatedApp = () => {
         <Route path="/application/:id/chat" element={<ApplicationChat />} />
       </Route>
 
-      {/* Admin routes */}
-      <Route element={<ProtectedRoute allowedRoles={["platform_admin"]} />}>
-        <Route path="/admin" element={<AdminLayout />} />
-      </Route>
+      {/* Admin routes — secure hidden access */}
+      <Route path="/admin" element={<AdminPage />} />
+      <Route
+        path="/admin/dashboard"
+        element={
+          <AdminProtectedRoute>
+            <AdminDashboard />
+          </AdminProtectedRoute>
+        }
+      />
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
