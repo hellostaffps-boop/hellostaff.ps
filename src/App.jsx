@@ -31,6 +31,7 @@ import EmployerDashboard from './pages/employer/Dashboard';
 import PostJob from './pages/employer/PostJob';
 import ManageJobs from './pages/employer/ManageJobs';
 import EmployerApplications from './pages/employer/EmployerApplications.jsx';
+import EmployerApplicationDetail from './pages/employer/EmployerApplicationDetail';
 import CompanyProfile from './pages/employer/CompanyProfile';
 import EmployerNotifications from './pages/employer/Notifications';
 import TeamMembers from './pages/employer/TeamMembers';
@@ -74,6 +75,7 @@ const AuthenticatedApp = () => {
           <Route path="post-job" element={<PostJob />} />
           <Route path="jobs" element={<ManageJobs />} />
           <Route path="applications" element={<EmployerApplications />} />
+          <Route path="applications/:id" element={<EmployerApplicationDetail />} />
           <Route path="notifications" element={<EmployerNotifications />} />
           <Route path="team" element={<TeamMembers />} />
         </Route>

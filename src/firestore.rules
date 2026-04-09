@@ -221,6 +221,78 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ─── application_notes ────────────────────────────────────────────────────
+    // Rule: employer-only internal review notes.
+    // Only org members can read/write notes for their org's applications.
+    // Candidates can NEVER read these notes.
+
+    match /application_notes/{noteId} {
+      // Employer members of the org can read notes for their org's applications
+      allow read: if isAuth()
+        && (isOrgOwner(resource.data.organization_id) || isMemberOf(resource.data.organization_id))
+        && resource.data.visibility == 'internal';
+
+      // Employer members can create notes for their org
+      allow create: if isAuth()
+        && (isOrgOwner(request.resource.data.organization_id) || isMemberOf(request.resource.data.organization_id))
+        && request.resource.data.author_email == request.auth.token.email
+        && request.resource.data.visibility == 'internal';
+
+      // Users can update only their own notes
+      allow update: if isAuth()
+        && resource.data.author_email == request.auth.token.email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['body', 'updated_at']);
+
+      // Users can delete only their own notes
+      allow delete: if isAuth()
+        && resource.data.author_email == request.auth.token.email;
+
+      allow write: if isAdmin();
+    }
+
+    // ─── application_evaluations ──────────────────────────────────────────────
+    // Rule: employer-only structured candidate evaluations.
+    // Only org members can read/write evaluations for their org's applications.
+    // Candidates can NEVER read these evaluations.
+
+    match /application_evaluations/{evalId} {
+      // Employer members of the org can read evaluations
+      allow read: if isAuth()
+        && (isOrgOwner(resource.data.organization_id) || isMemberOf(resource.data.organization_id));
+
+      // Employer members can create evaluations for their org
+      allow create: if isAuth()
+        && (isOrgOwner(request.resource.data.organization_id) || isMemberOf(request.resource.data.organization_id))
+        && request.resource.data.reviewer_email == request.auth.token.email;
+
+      // Users can update only their own evaluations
+      allow update: if isAuth()
+        && resource.data.reviewer_email == request.auth.token.email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'overall_score', 'strengths', 'concerns', 'tags', 'recommendation', 'updated_at'
+        ]);
+
+      allow write: if isAdmin();
+    }
+
+    // ─── application_messages ─────────────────────────────────────────────────
+    // Rule: two-way communication between candidate and employer.
+    // Candidates read/write their own app messages.
+    // Employers read/write messages for their org's applications.
+
+    match /application_messages/{msgId} {
+      // Candidate reads own messages
+      allow read: if isAuth()
+        && get(/databases/$(database)/documents/applications/$(resource.data.application_id)).data.candidate_user_id == request.auth.uid;
+
+      // Employer reads messages for their org
+      allow read: if isAuth()
+        && (isOrgOwner(get(/databases/$(database)/documents/applications/$(resource.data.application_id)).data.organization_id) || isMemberOf(get(/databases/$(database)/documents/applications/$(resource.data.application_id)).data.organization_id));
+
+      allow write: if isAuth();
+      allow write: if isAdmin();
+    }
+
     // ─── notifications ────────────────────────────────────────────────────────
     // Rule: users read/update only their own notifications.
 

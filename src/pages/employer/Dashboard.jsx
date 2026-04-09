@@ -8,7 +8,8 @@ import EmptyState from "../../components/EmptyState";
 import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getEmployerOrganizationJobs, getApplicationsByOrg, getOrganization } from "@/lib/firestoreService";
+import { getEmployerProfile, getEmployerOrganizationJobs, getApplicationsByOrg, getOrganization, getApplicationEvaluation, getEmployerHiringReviewSummary } from "@/lib/firestoreService";
+import { useQuery } from "@tanstack/react-query";
 import { getOrganizationMemberCount } from "@/lib/teamService";
 import { getOrgCompletion } from "@/lib/profileCompletion";
 
@@ -50,6 +51,12 @@ export default function Dashboard() {
     enabled: !!orgId,
   });
 
+  const { data: reviewSummary = {} } = useQuery({
+    queryKey: ["hiring-review-summary", firebaseUser?.uid],
+    queryFn: () => getEmployerHiringReviewSummary(firebaseUser.uid),
+    enabled: !!firebaseUser,
+  });
+
   const now = Date.now();
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
   const newApps = applications.filter((a) => {
@@ -61,11 +68,13 @@ export default function Dashboard() {
   const draftJobs = jobs.filter((j) => j.status === "draft").length;
   const pendingApps = applications.filter((a) => a.status === "submitted").length;
 
+  const { lang: language } = useLanguage();
+
   const stats = [
     { icon: Briefcase, label: t("dashboard", "activeJobs"), value: jobs.filter((j) => j.status === "published").length },
     { icon: FileText, label: t("dashboard", "totalApplications"), value: applications.length },
-    { icon: Users, label: t("dashboard", "newApplications"), value: newApps },
-    { icon: Eye, label: t("status", "shortlisted"), value: shortlisted },
+    { icon: Users, label: language === "ar" ? "قيد المراجعة" : "Under Review", value: reviewSummary.reviewingCount || 0 },
+    { icon: Eye, label: t("status", "shortlisted"), value: reviewSummary.shortlistedCount || 0 },
   ];
 
   // Suggested next actions for owner
@@ -76,8 +85,6 @@ export default function Dashboard() {
     draftJobs > 0 && { icon: Briefcase, label: language === "ar" ? `انشر ${draftJobs} وظيفة مسودة` : `Publish ${draftJobs} draft job${draftJobs > 1 ? 's' : ''}`, path: "/employer/jobs" },
     pendingApps > 0 && { icon: CheckCircle2, label: language === "ar" ? `راجع ${pendingApps} طلب جديد` : `Review ${pendingApps} new application${pendingApps > 1 ? 's' : ''}`, path: "/employer/applications" },
   ].filter(Boolean);
-
-  const { lang: language } = useLanguage();
 
   return (
     <div>

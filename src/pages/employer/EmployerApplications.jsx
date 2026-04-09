@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FileText, ChevronDown, MessageCircle, CalendarClock, ClipboardList, Video, Sparkles, Star, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,6 +38,7 @@ export default function EmployerApplications() {
   const { t, lang } = useLanguage();
   const { firebaseUser } = useFirebaseAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [statusTab, setStatusTab] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
   const [scheduleApp, setScheduleApp] = useState(null);
@@ -179,7 +180,7 @@ export default function EmployerApplications() {
             const nextStates = VALID_TRANSITIONS[app.status] || [];
             const interview = interviews[app.id];
             return (
-              <div key={app.id} className="bg-white rounded-xl border border-border p-5">
+              <div key={app.id} className="bg-white rounded-xl border border-border p-5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/employer/applications/${app.id}`)}>
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   {/* Left: candidate info */}
                   <div className="flex-1 min-w-0">

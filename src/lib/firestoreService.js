@@ -612,3 +612,109 @@ export const sendApplicationMessage = (applicationId, { sender_uid, sender_name,
     message,
     created_at: serverTimestamp(),
   });
+
+// ─── Application Internal Notes (Employer-only) ────────────────────────────────
+
+export const getApplicationInternalNotes = async (applicationId) => {
+  const q = query(
+    collection(db, 'application_notes'),
+    where('application_id', '==', applicationId),
+    orderBy('created_at', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const createApplicationInternalNote = (applicationId, organizationId, { author_email, author_name, body }) =>
+  addDoc(collection(db, 'application_notes'), {
+    application_id: applicationId,
+    organization_id: organizationId,
+    author_email,
+    author_name,
+    body,
+    visibility: 'internal',
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+
+export const updateApplicationInternalNote = (noteId, { body }) =>
+  updateDoc(doc(db, 'application_notes', noteId), {
+    body,
+    updated_at: serverTimestamp(),
+  });
+
+// ─── Application Evaluation (Employer-only structured review) ────────────────
+
+export const getApplicationEvaluation = async (applicationId) => {
+  const q = query(
+    collection(db, 'application_evaluations'),
+    where('application_id', '==', applicationId)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const saveApplicationEvaluation = async (applicationId, organizationId, { reviewer_email, reviewer_name, overall_score, strengths, concerns, tags, recommendation }) => {
+  const q = query(
+    collection(db, 'application_evaluations'),
+    where('application_id', '==', applicationId),
+    where('reviewer_email', '==', reviewer_email)
+  );
+  const snap = await getDocs(q);
+
+  const payload = {
+    overall_score,
+    strengths: strengths || [],
+    concerns: concerns || [],
+    tags: tags || [],
+    recommendation,
+    updated_at: serverTimestamp(),
+  };
+
+  if (snap.docs.length > 0) {
+    return updateDoc(snap.docs[0].ref, payload);
+  } else {
+    return addDoc(collection(db, 'application_evaluations'), {
+      application_id: applicationId,
+      organization_id: organizationId,
+      reviewer_email,
+      reviewer_name,
+      ...payload,
+      created_at: serverTimestamp(),
+    });
+  }
+};
+
+// ─── Hiring Review Summary (Dashboard) ──────────────────────────────────────
+
+export const getEmployerHiringReviewSummary = async (uid) => {
+  const profile = await getEmployerProfile(uid);
+  if (!profile?.organization_id) return { reviewingCount: 0, shortlistedCount: 0, strongEvaluationCount: 0 };
+
+  const appsQ = query(
+    collection(db, 'applications'),
+    where('organization_id', '==', profile.organization_id)
+  );
+  const appSnap = await getDocs(appsQ);
+  const applications = appSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  let reviewingCount = 0;
+  let shortlistedCount = 0;
+  let strongEvaluationCount = 0;
+
+  for (const app of applications) {
+    if (app.status === 'reviewing') reviewingCount++;
+    if (app.status === 'shortlisted') shortlistedCount++;
+
+    const evals = await getApplicationEvaluation(app.id);
+    if (evals.some(e => e.recommendation === 'strong_yes')) {
+      strongEvaluationCount++;
+    }
+  }
+
+  return {
+    reviewingCount,
+    shortlistedCount,
+    strongEvaluationCount,
+  };
+};

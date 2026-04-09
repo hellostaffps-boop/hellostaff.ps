@@ -1,0 +1,112 @@
+{
+  "name": "ApplicationEvaluation",
+  "type": "object",
+  "properties": {
+    "application_id": {
+      "type": "string",
+      "description": "Reference to the application being evaluated"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organization owner of the evaluation"
+    },
+    "reviewer_email": {
+      "type": "string",
+      "description": "Email of the reviewer"
+    },
+    "reviewer_name": {
+      "type": "string",
+      "description": "Display name of the reviewer"
+    },
+    "overall_score": {
+      "type": "number",
+      "description": "Score from 1-5 for overall fit",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Key strengths of the candidate"
+    },
+    "concerns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Areas of concern or questions"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "cultural_fit",
+          "experienced",
+          "quick_learner",
+          "leadership",
+          "team_player",
+          "technical_skills",
+          "communication",
+          "reliability"
+        ]
+      },
+      "description": "Quick quality labels"
+    },
+    "recommendation": {
+      "type": "string",
+      "enum": [
+        "strong_yes",
+        "yes",
+        "maybe",
+        "no"
+      ],
+      "description": "Hiring recommendation from this evaluator"
+    }
+  },
+  "required": [
+    "application_id",
+    "organization_id",
+    "reviewer_email",
+    "recommendation"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "employer_owner"
+      },
+      "$and": [
+        {
+          "data.reviewer_email": "{{user.email}}"
+        }
+      ]
+    },
+    "read": {
+      "user_condition": {
+        "role": "employer_owner"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "employer_owner"
+      },
+      "$and": [
+        {
+          "data.reviewer_email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "employer_owner"
+      },
+      "$and": [
+        {
+          "data.reviewer_email": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}
