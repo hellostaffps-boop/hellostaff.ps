@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
+import AIJobAssistant from "../../components/AIJobAssistant";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
 import { getEmployerProfile, getOrganization, createJobForOwnedOrganization } from "@/lib/firestoreService";
@@ -72,7 +73,12 @@ export default function PostJob() {
   return (
     <div>
       <PageHeader title={t("dashboard", "postJob")} />
-      <div className="bg-white rounded-2xl border border-border p-8 max-w-2xl">
+      <div className="max-w-2xl space-y-5">
+        <AIJobAssistant
+          category={form.category}
+          onApply={(fields) => setForm((prev) => ({ ...prev, ...fields }))}
+        />
+      <div className="bg-white rounded-2xl border border-border p-8">
         <div className="space-y-5">
           <div>
             <Label className="text-sm">{t("jobDetails", "jobDescription").replace(" الوظيفة", "").replace(" Description", " Title")}</Label>
@@ -135,6 +141,7 @@ export default function PostJob() {
             <Button variant="ghost" onClick={() => navigate("/employer/jobs")}>{t("editProfile", "cancel")}</Button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
