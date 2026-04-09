@@ -500,6 +500,16 @@ const translations = {
       workers: "Workers",
       businesses: "Businesses",
     },
+    messaging: {
+      message: "Message",
+      noMessages: "No messages yet. Start the conversation!",
+      inputPlaceholder: "Type a message...",
+      you: "You",
+      back: "Back to Applications",
+      notFound: "Application not found.",
+      forbidden: "You don't have access to this conversation.",
+      loginRequired: "Please sign in to view messages.",
+    },
     pageNotFound: {
       title: "Page Not Found",
       description: "could not be found in this application.",
@@ -972,6 +982,16 @@ const translations = {
       part_time: "دوام جزئي",
       flexible: "مرن",
       weekends_only: "عطلة نهاية الأسبوع فقط",
+    },
+    messaging: {
+      message: "رسالة",
+      noMessages: "لا توجد رسائل بعد. ابدأ المحادثة!",
+      inputPlaceholder: "اكتب رسالة...",
+      you: "أنت",
+      back: "العودة إلى الطلبات",
+      notFound: "الطلب غير موجود.",
+      forbidden: "ليس لديك صلاحية الوصول إلى هذه المحادثة.",
+      loginRequired: "يرجى تسجيل الدخول لعرض الرسائل.",
     },
     pageNotFound: {
       title: "الصفحة غير موجودة",

@@ -33,6 +33,7 @@ import ManageJobs from './pages/employer/ManageJobs';
 import EmployerApplications from './pages/employer/EmployerApplications';
 import CompanyProfile from './pages/employer/CompanyProfile';
 import EmployerNotifications from './pages/employer/Notifications';
+import ApplicationChat from './pages/ApplicationChat';
 
 const AuthenticatedApp = () => {
   return (
@@ -74,6 +75,11 @@ const AuthenticatedApp = () => {
           <Route path="applications" element={<EmployerApplications />} />
           <Route path="notifications" element={<EmployerNotifications />} />
         </Route>
+      </Route>
+
+      {/* Shared application chat — accessible by candidate and employer */}
+      <Route element={<ProtectedRoute allowedRoles={["candidate", "employer_owner", "employer_manager"]} />}>
+        <Route path="/application/:id/chat" element={<ApplicationChat />} />
       </Route>
 
       {/* Admin routes */}

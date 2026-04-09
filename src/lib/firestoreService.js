@@ -24,6 +24,7 @@ import {
   orderBy,
   serverTimestamp,
   limit,
+  onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -475,3 +476,44 @@ export const updateJob = (jobId, data) =>
   updateDoc(doc(db, 'jobs', jobId), { ...data, updated_at: serverTimestamp() });
 
 export const deleteJob = (jobId) => deleteDoc(doc(db, 'jobs', jobId));
+
+// ─── Application by ID ────────────────────────────────────────────────────────
+
+export const getApplicationById = (applicationId) =>
+  getDoc(doc(db, 'applications', applicationId)).then((s) => s.exists() ? { id: s.id, ...s.data() } : null);
+
+// ─── Application Messaging ────────────────────────────────────────────────────
+
+/**
+ * Real-time subscription to messages for an application.
+ * Returns an unsubscribe function.
+ * Only the candidate on the application and the employer org members should be
+ * able to read/write — enforce via Firestore Security Rules:
+ *   match /application_messages/{msgId} {
+ *     allow read, write: if request.auth != null;
+ *   }
+ */
+export const subscribeToApplicationMessages = (applicationId, callback) => {
+  const q = query(
+    collection(db, 'application_messages'),
+    where('application_id', '==', applicationId),
+    orderBy('created_at', 'asc')
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+};
+
+/**
+ * Send a message on an application thread.
+ * Sender identity is always attached server-side via the authenticated uid.
+ */
+export const sendApplicationMessage = (applicationId, { sender_uid, sender_name, sender_role, message }) =>
+  addDoc(collection(db, 'application_messages'), {
+    application_id: applicationId,
+    sender_uid,
+    sender_name: sender_name || '',
+    sender_role: sender_role || '',
+    message,
+    created_at: serverTimestamp(),
+  });

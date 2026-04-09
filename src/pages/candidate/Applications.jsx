@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Clock } from "lucide-react";
+import { Link } from "react-router-dom";
+import { FileText, Clock, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
@@ -83,9 +84,16 @@ export default function Applications() {
                     <Clock className="w-3 h-3" /> {t("applications", "applied")} {app.applied_at?.toDate ? app.applied_at.toDate().toLocaleDateString() : ""}
                   </div>
                 </div>
-                <Badge className={`text-xs border ${STATUS_COLORS[app.status] || "bg-secondary"}`}>
-                  {t("status", app.status) || app.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={`text-xs border ${STATUS_COLORS[app.status] || "bg-secondary"}`}>
+                    {t("status", app.status) || app.status}
+                  </Badge>
+                  <Link to={`/application/${app.id}/chat`}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors">
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t("messaging", "message")}</span>
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

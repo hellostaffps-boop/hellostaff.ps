@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, ChevronDown } from "lucide-react";
+import { Link } from "react-router-dom";
+import { FileText, ChevronDown, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../../components/PageHeader";
@@ -152,7 +153,12 @@ export default function EmployerApplications() {
                     )}
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    <Link to={`/application/${app.id}/chat`}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors h-8 px-2 rounded-md border border-border hover:border-accent/30">
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>{t("messaging", "message")}</span>
+                    </Link>
                     {nextStates.length > 0 ? (
                       <Select
                         value=""
