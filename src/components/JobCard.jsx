@@ -49,6 +49,9 @@ export default function JobCard({ job, showSave, onSave, saved }) {
           <p className="text-sm text-muted-foreground mt-1">
             {job.organization_name || t("jobCard", "company")}
           </p>
+          {job.description && (
+            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{job.description}</p>
+          )}
 
           <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-muted-foreground">
             {job.location && (
@@ -62,9 +65,9 @@ export default function JobCard({ job, showSave, onSave, saved }) {
                 {job.salary_min}{job.salary_max ? `–${job.salary_max}` : ""} / {job.salary_period || t("jobCard", "month")}
               </span>
             )}
-            {job.created_date && (
+            {job.created_at?.toDate && (
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" /> {new Date(job.created_date).toLocaleDateString()}
+                <Clock className="w-3.5 h-3.5" /> {job.created_at.toDate().toLocaleDateString()}
               </span>
             )}
           </div>

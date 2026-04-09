@@ -33,11 +33,19 @@ export default function Dashboard() {
     enabled: !!orgId,
   });
 
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const newApps = applications.filter((a) => {
+    const ts = a.applied_at?.toDate ? a.applied_at.toDate().getTime() : 0;
+    return ts > sevenDaysAgo;
+  }).length;
+  const shortlisted = applications.filter((a) => a.status === "shortlisted").length;
+
   const stats = [
     { icon: Briefcase, label: t("dashboard", "activeJobs"), value: jobs.filter((j) => j.status === "published").length },
     { icon: FileText, label: t("dashboard", "totalApplications"), value: applications.length },
-    { icon: Users, label: t("dashboard", "candidatesReviewed"), value: 0 },
-    { icon: Eye, label: t("dashboard", "jobViews"), value: 0 },
+    { icon: Users, label: t("dashboard", "newApplications"), value: newApps },
+    { icon: Eye, label: t("status", "shortlisted"), value: shortlisted },
   ];
 
   return (

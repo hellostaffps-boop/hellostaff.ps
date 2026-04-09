@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, FileText, Bookmark, Eye } from "lucide-react";
+import { Briefcase, FileText, Star, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import StatsCard from "../../components/StatsCard";
 import PageHeader from "../../components/PageHeader";
 import JobCard from "../../components/JobCard";
@@ -7,6 +8,14 @@ import EmptyState from "../../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
 import { getApplicationsByCandidate, getPublishedJobs } from "@/lib/firestoreService";
+
+const STATUS_COLORS = {
+  submitted: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  reviewing: "bg-blue-50 text-blue-700 border-blue-200",
+  shortlisted: "bg-purple-50 text-purple-700 border-purple-200",
+  rejected: "bg-red-50 text-red-700 border-red-200",
+  hired: "bg-green-50 text-green-700 border-green-200",
+};
 
 export default function Dashboard() {
   const { t } = useLanguage();
@@ -23,11 +32,15 @@ export default function Dashboard() {
     queryFn: getPublishedJobs,
   });
 
+  const reviewing = applications.filter((a) => a.status === "reviewing").length;
+  const shortlisted = applications.filter((a) => a.status === "shortlisted").length;
+  const hired = applications.filter((a) => a.status === "hired").length;
+
   const stats = [
-    { icon: FileText, label: t("dashboard", "applicationsSent"), value: applications.length, trend: 0 },
-    { icon: Briefcase, label: t("dashboard", "activeJobs"), value: jobs.length, trend: 0 },
-    { icon: Bookmark, label: t("dashboard", "savedJobsCount"), value: 0 },
-    { icon: Eye, label: t("dashboard", "profileViews"), value: 0 },
+    { icon: FileText, label: t("dashboard", "applicationsSent"), value: applications.length },
+    { icon: Briefcase, label: t("status", "reviewing"), value: reviewing },
+    { icon: Star, label: t("status", "shortlisted"), value: shortlisted },
+    { icon: CheckCircle2, label: t("status", "hired"), value: hired },
   ];
 
   const recentApps = applications.slice(0, 5);
@@ -51,10 +64,14 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {recentApps.map((app) => (
-                <div key={app.id} className="bg-white rounded-xl border border-border p-4">
-                  <div className="font-medium text-sm">{app.job_title || t("applications", "job")}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{app.organization_name}</div>
-                  <div className="text-xs text-accent font-medium mt-2">{t("status", app.status) || app.status}</div>
+                <div key={app.id} className="bg-white rounded-xl border border-border p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm truncate">{app.job_title || t("applications", "job")}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 truncate">{app.organization_name}</div>
+                  </div>
+                  <Badge className={`text-xs border shrink-0 ${STATUS_COLORS[app.status] || "bg-secondary"}`}>
+                    {t("status", app.status) || app.status}
+                  </Badge>
                 </div>
               ))}
             </div>

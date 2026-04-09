@@ -20,7 +20,7 @@ export default function PostJob() {
   const { firebaseUser } = useFirebaseAuth();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    title: "", category: "barista", employment_type: "full_time",
+    title: "", job_type: "barista", employment_type: "full_time",
     location: "", salary_min: "", salary_max: "", description: "",
     requirements: "", benefits: "", status: "draft",
   });
@@ -87,7 +87,7 @@ export default function PostJob() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-sm">{t("categories", "heading") || "Category"}</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              <Select value={form.job_type} onValueChange={(v) => setForm({ ...form, job_type: v })}>
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>{categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
               </Select>

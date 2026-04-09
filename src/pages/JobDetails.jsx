@@ -1,18 +1,22 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Clock, DollarSign, Briefcase, ArrowLeft } from "lucide-react";
+import { MapPin, Clock, DollarSign, Briefcase, ArrowLeft, CheckCircle2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getJob, createApplication, checkExistingApplication } from "@/lib/firestoreService";
+import { getJob, createApplicationForCurrentCandidate, checkExistingApplication } from "@/lib/firestoreService";
 import { useState } from "react";
 
 export default function JobDetails() {
   const { id } = useParams();
   const { t } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const navigate = useNavigate();
+  const [showModal, setShowModal] = useState(false);
+  const [coverLetter, setCoverLetter] = useState("");
   const [applying, setApplying] = useState(false);
 
   const typeLabels = {
@@ -32,28 +36,28 @@ export default function JobDetails() {
     enabled: !!id,
   });
 
-  const handleApply = async () => {
-    if (!firebaseUser) {
-      toast.error(t("authErrors", "loginRequired") || "Please sign in to apply");
-      return;
-    }
+  const { data: alreadyApplied = false } = useQuery({
+    queryKey: ["already-applied", id, firebaseUser?.uid],
+    queryFn: () => checkExistingApplication(id, firebaseUser.uid),
+    enabled: !!firebaseUser && !!id,
+  });
+
+  const isCandidate = userProfile?.role === "candidate";
+  const isLoggedIn = !!firebaseUser;
+
+  const handleApplySubmit = async () => {
     setApplying(true);
-    const already = await checkExistingApplication(id, firebaseUser.uid);
-    if (already) {
-      toast.error(t("jobDetails", "alreadyApplied") || "Already applied");
-      setApplying(false);
-      return;
-    }
-    await createApplication({
-      job_id: id,
+    await createApplicationForCurrentCandidate(firebaseUser.uid, id, {
       job_title: job.title,
       organization_id: job.organization_id,
       organization_name: job.organization_name || "",
-      candidate_user_id: firebaseUser.uid,
-      candidate_email: firebaseUser.email,
+      candidate_name: userProfile?.full_name || firebaseUser.email,
+      cover_letter: coverLetter,
     });
     toast.success(t("jobDetails", "applySuccess") || "Application submitted!");
     setApplying(false);
+    setShowModal(false);
+    setCoverLetter("");
   };
 
   if (isLoading) {
@@ -61,6 +65,34 @@ export default function JobDetails() {
       <div className="max-w-4xl mx-auto px-4 py-20 flex justify-center">
         <div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  // Apply button logic
+  let applyButton;
+  if (alreadyApplied) {
+    applyButton = (
+      <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
+        <CheckCircle2 className="w-4 h-4" /> {t("jobDetails", "alreadyApplied")}
+      </div>
+    );
+  } else if (!isLoggedIn) {
+    applyButton = (
+      <Button size="lg" variant="outline" className="gap-2" onClick={() => navigate("/auth/login")}>
+        <LogIn className="w-4 h-4" /> {t("jobDetails", "loginToApply")}
+      </Button>
+    );
+  } else if (!isCandidate) {
+    applyButton = (
+      <div className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm">
+        {t("jobDetails", "notEligible")}
+      </div>
+    );
+  } else {
+    applyButton = (
+      <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => setShowModal(true)}>
+        {t("jobDetails", "applyNow")}
+      </Button>
     );
   }
 
@@ -84,17 +116,14 @@ export default function JobDetails() {
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Badge variant="secondary">{typeLabels[job.category] || job.category}</Badge>
+              <Badge variant="secondary">{typeLabels[job.job_type] || job.job_type}</Badge>
               {job.employment_type && <Badge variant="outline">{job.employment_type}</Badge>}
               <Badge className="bg-green-50 text-green-700 border-green-200">{t("status", job.status) || job.status}</Badge>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">{job.title}</h1>
             <p className="text-muted-foreground mt-1">{job.organization_name || t("common", "company")}</p>
           </div>
-          <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
-            onClick={handleApply} disabled={applying}>
-            {applying ? t("common", "loading") : t("jobDetails", "applyNow")}
-          </Button>
+          {applyButton}
         </div>
 
         <div className="flex flex-wrap gap-6 py-6 border-y border-border text-sm text-muted-foreground">
@@ -133,6 +162,35 @@ export default function JobDetails() {
           )}
         </div>
       </div>
+
+      {/* Apply Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-lg p-6">
+            <h2 className="font-bold text-lg mb-1">{t("jobDetails", "applyModalTitle")}</h2>
+            <p className="text-sm text-muted-foreground mb-5">{job.title} · {job.organization_name}</p>
+            <div className="mb-5">
+              <label className="text-sm font-medium block mb-1.5">{t("jobDetails", "coverLetter")}</label>
+              <Textarea
+                value={coverLetter}
+                onChange={(e) => setCoverLetter(e.target.value)}
+                rows={5}
+                className="resize-none"
+                placeholder={t("jobDetails", "coverLetterPlaceholder")}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={handleApplySubmit} disabled={applying}
+                className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90">
+                {applying ? t("common", "loading") : t("jobDetails", "submitApplication")}
+              </Button>
+              <Button variant="outline" onClick={() => setShowModal(false)} disabled={applying}>
+                {t("common", "cancel")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
