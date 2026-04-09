@@ -5,9 +5,11 @@ import StatsCard from "../../components/StatsCard";
 import PageHeader from "../../components/PageHeader";
 import JobCard from "../../components/JobCard";
 import EmptyState from "../../components/EmptyState";
+import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getApplicationsByCandidate, getPublishedJobs } from "@/lib/firestoreService";
+import { getApplicationsByCandidate, getPublishedJobs, getCandidateProfile } from "@/lib/firestoreService";
+import { getCandidateCompletion } from "@/lib/profileCompletion";
 
 const STATUS_COLORS = {
   submitted: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -32,6 +34,14 @@ export default function Dashboard() {
     queryFn: getPublishedJobs,
   });
 
+  const { data: candidateProfile } = useQuery({
+    queryKey: ["my-candidate-profile", firebaseUser?.uid],
+    queryFn: () => getCandidateProfile(firebaseUser.uid),
+    enabled: !!firebaseUser,
+  });
+
+  const completion = getCandidateCompletion(candidateProfile);
+
   const reviewing = applications.filter((a) => a.status === "reviewing").length;
   const shortlisted = applications.filter((a) => a.status === "shortlisted").length;
   const hired = applications.filter((a) => a.status === "hired").length;
@@ -49,6 +59,18 @@ export default function Dashboard() {
   return (
     <div>
       <PageHeader title={t("dashboard", "candidateTitle")} description={t("dashboard", "candidateSubtext")} />
+
+      {/* Profile completion widget */}
+      {completion.score < 100 && (
+        <div className="mb-6">
+          <ProfileCompletionCard
+            score={completion.score}
+            missing={completion.missing}
+            editPath="/candidate/profile/edit"
+            type="candidate"
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((s) => <StatsCard key={s.label} {...s} />)}

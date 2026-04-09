@@ -5,9 +5,11 @@ import { Link } from "react-router-dom";
 import StatsCard from "../../components/StatsCard";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
+import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getEmployerOrganizationJobs, getApplicationsByOrg } from "@/lib/firestoreService";
+import { getEmployerProfile, getEmployerOrganizationJobs, getApplicationsByOrg, getOrganization } from "@/lib/firestoreService";
+import { getOrgCompletion } from "@/lib/profileCompletion";
 
 export default function Dashboard() {
   const { t } = useLanguage();
@@ -20,6 +22,14 @@ export default function Dashboard() {
   });
 
   const orgId = employerProfile?.organization_id;
+
+  const { data: org } = useQuery({
+    queryKey: ["organization", orgId],
+    queryFn: () => getOrganization(orgId),
+    enabled: !!orgId,
+  });
+
+  const orgCompletion = getOrgCompletion(org);
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["employer-jobs", firebaseUser?.uid],
@@ -57,6 +67,18 @@ export default function Dashboard() {
           </Button>
         </Link>
       </PageHeader>
+
+      {/* Org completion widget */}
+      {orgCompletion.score < 80 && (
+        <div className="mb-6">
+          <ProfileCompletionCard
+            score={orgCompletion.score}
+            missing={orgCompletion.missing}
+            editPath="/employer/company"
+            type="org"
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((s) => <StatsCard key={s.label} {...s} />)}

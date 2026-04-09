@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
+import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
 import { getCandidateProfile } from "@/lib/firestoreService";
+import { getCandidateCompletion } from "@/lib/profileCompletion";
 
 export default function Profile() {
   const { t } = useLanguage();
@@ -55,6 +57,7 @@ export default function Profile() {
     );
   }
 
+  const completion = getCandidateCompletion(profile);
   const sectionClass = "bg-white rounded-2xl border border-border p-6 mb-4";
 
   return (
@@ -66,6 +69,15 @@ export default function Profile() {
           </Button>
         </Link>
       </PageHeader>
+
+      <div className="mb-4">
+        <ProfileCompletionCard
+          score={completion.score}
+          missing={completion.missing}
+          editPath="/candidate/profile/edit"
+          type="candidate"
+        />
+      </div>
 
       {/* Header card */}
       <div className={sectionClass}>
