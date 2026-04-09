@@ -1,8 +1,8 @@
 import { Outlet } from "react-router-dom";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getUnreadNotificationsCount } from "@/lib/firestoreService";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import AppSidebar from "./AppSidebar";
 import AppTopbar from "./AppTopbar";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -19,13 +19,18 @@ import {
 
 export default function EmployerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { firebaseUser } = useFirebaseAuth();
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['unread-notifications', firebaseUser?.uid],
-    queryFn: () => getUnreadNotificationsCount(firebaseUser.uid),
-    enabled: !!firebaseUser,
-    refetchInterval: 30000,
-  });
+
+  useEffect(() => {
+    if (!firebaseUser?.uid) return;
+    const q = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', firebaseUser.uid),
+      where('is_read', '==', false)
+    );
+    return onSnapshot(q, (snap) => setUnreadCount(snap.size));
+  }, [firebaseUser?.uid]);
   const { t } = useLanguage();
 
   const links = [

@@ -11,7 +11,7 @@ import PageHeader from "../../components/PageHeader";
 import AIJobAssistant from "../../components/AIJobAssistant";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getOrganization, createJobForOwnedOrganization } from "@/lib/firestoreService";
+import { getEmployerProfile, getOrganization, createJobForOwnedOrganization, notifyMatchingCandidatesForJob } from "@/lib/firestoreService";
 
 
 export default function PostJob() {
@@ -54,7 +54,7 @@ export default function PostJob() {
     if (!form.title) { toast.error(t("common", "required")); return; }
     if (!employerProfile?.organization_id) { toast.error("Organization not found"); return; }
     setSaving(true);
-    await createJobForOwnedOrganization(
+    const jobRef = await createJobForOwnedOrganization(
       firebaseUser.uid,
       {
         ...form,
@@ -65,6 +65,15 @@ export default function PostJob() {
       employerProfile.organization_id,
       org?.name || ""
     );
+    // Notify matching candidates when job is published
+    if (publish) {
+      notifyMatchingCandidatesForJob({
+        id: jobRef.id,
+        title: form.title,
+        job_type: form.job_type,
+        organization_name: org?.name || "",
+      }).catch(() => {});
+    }
     toast.success(publish ? t("status", "published") : t("status", "draft"));
     setSaving(false);
     navigate("/employer/jobs");

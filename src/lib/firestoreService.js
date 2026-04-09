@@ -523,6 +523,31 @@ export const getOwnedOrganization = async (uid) => {
   return { id: snap.docs[0].id, ...snap.docs[0].data() };
 };
 
+// ─── Job Notification ──────────────────────────────────────────────────────────────
+
+/**
+ * Notify all candidates whose preferred_roles match the job_type of a newly published job.
+ * Runs non-blocking — errors are silently caught.
+ */
+export const notifyMatchingCandidatesForJob = async (job) => {
+  if (!job?.job_type) return;
+  const q = query(
+    collection(db, 'candidate_profiles'),
+    where('preferred_roles', 'array-contains', job.job_type)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return;
+  const notifications = snap.docs.map((d) =>
+    createNotification(d.data().user_id, {
+      title: `وظيفة جديدة تناسبك: ${job.title}`,
+      message: `نشرت ${job.organization_name || 'شركة'} وظيفة جديدة في تخصصك. اطلع عليها الآن!`,
+      type: 'job',
+      link: `/jobs/${job.id}`,
+    })
+  );
+  await Promise.allSettled(notifications);
+};
+
 // ─── Backward-compatible job helpers ───────────────────────────────────────
 
 export const getJobsByOrg = async (orgId) => {
