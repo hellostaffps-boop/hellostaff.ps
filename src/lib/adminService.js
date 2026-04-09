@@ -1,12 +1,11 @@
 /**
- * adminService.js — Phase 4 Admin-Only Data Access Layer
+ * adminService.js — Phase 4.1 Admin-Only Data Access Layer
  *
- * ALL methods in this file require platform_admin role.
- * Each method validates the caller's role before executing any Firestore operation.
- * This is the ONLY place admin-privileged reads/writes should be initiated from the frontend.
+ * READS only. All privileged mutations have been moved to lib/privilegedActions.js.
+ * This file is safe to call from admin UI components — every method validates
+ * platform_admin role before executing any Firestore read.
  *
- * Note: Sensitive mutations (role promotion, suspension, org verification) are
- * intentionally left as stubs — they are prepared for Cloud Functions migration.
+ * See also: SECURITY_NOTES.md for full architecture documentation.
  */
 
 import {
@@ -103,28 +102,14 @@ export const getAdminReportsSafe = async (userProfile) => {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
 
-// ─── Privileged mutations — prepared for Cloud Functions migration ─────────────
-
-/**
- * STUB: Promote a user role.
- * This operation must NOT be performed directly from the client in production.
- * Move to a Cloud Function with admin SDK when ready.
- */
-export const promoteUserRole = async (userProfile, _targetUid, _newRole) => {
-  assertAdmin(userProfile);
-  // TODO: implement via Cloud Functions / Firebase Admin SDK
-  throw new Error("NOT_IMPLEMENTED: role promotion requires Cloud Functions. Contact your backend engineer.");
-};
-
-/**
- * STUB: Suspend a user.
- * Requires Cloud Functions for safe execution.
- */
-export const suspendUser = async (userProfile, _targetUid) => {
-  assertAdmin(userProfile);
-  // TODO: implement via Cloud Functions / Firebase Admin SDK
-  throw new Error("NOT_IMPLEMENTED: user suspension requires Cloud Functions.");
-};
+// ─── Privileged mutations — delegated to lib/privilegedActions.js ─────────────
+//
+// All sensitive mutations (role promotion, suspend, org verify, etc.) have been
+// moved to lib/privilegedActions.js which provides stub implementations with
+// clear migration paths to Cloud Functions.
+//
+// Import from privilegedActions.js directly in admin UI components:
+//   import { promoteUserRole, suspendUser, isPrivilegedActionError } from '@/lib/privilegedActions';
 
 /**
  * STUB: Verify an organization.

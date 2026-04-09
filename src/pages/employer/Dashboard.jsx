@@ -7,7 +7,7 @@ import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getJobsByOrg, getApplicationsByOrg } from "@/lib/firestoreService";
+import { getEmployerProfile, getEmployerOrganizationJobs, getApplicationsByOrg } from "@/lib/firestoreService";
 
 export default function Dashboard() {
   const { t } = useLanguage();
@@ -22,9 +22,9 @@ export default function Dashboard() {
   const orgId = employerProfile?.organization_id;
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["employer-jobs", orgId],
-    queryFn: () => getJobsByOrg(orgId),
-    enabled: !!orgId,
+    queryKey: ["employer-jobs", firebaseUser?.uid],
+    queryFn: () => getEmployerOrganizationJobs(firebaseUser.uid),
+    enabled: !!firebaseUser,
   });
 
   const { data: applications = [] } = useQuery({

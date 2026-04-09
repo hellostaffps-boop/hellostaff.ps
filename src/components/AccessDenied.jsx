@@ -1,4 +1,4 @@
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -28,6 +28,12 @@ export default function AccessDenied({ message, variant = "forbidden" }) {
         ? "السجل الذي تبحث عنه غير موجود أو تم حذفه."
         : "The record you are looking for does not exist or has been removed."),
     },
+    privileged: {
+      title: isAr ? "إجراء يتطلب صلاحيات خاصة" : "Privileged Action Required",
+      desc: message || (isAr
+        ? "هذا الإجراء يتطلب تنفيذه من خلال الخادم. سيتم تفعيله قريباً."
+        : "This action requires server-side privileges and is not yet available from the client."),
+    },
     loading: {
       title: isAr ? "جارٍ التحقق من الصلاحيات" : "Verifying access",
       desc: isAr ? "يرجى الانتظار..." : "Please wait...",
@@ -35,6 +41,8 @@ export default function AccessDenied({ message, variant = "forbidden" }) {
   };
 
   const { title, desc } = copy[variant] || copy.forbidden;
+  const icon = variant === "privileged" ? Lock : ShieldAlert;
+  const IconComponent = icon;
 
   const handleBack = () => {
     const role = userProfile?.role;
@@ -56,7 +64,7 @@ export default function AccessDenied({ message, variant = "forbidden" }) {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 text-center p-8">
       <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
-        <ShieldAlert className="w-7 h-7 text-destructive" />
+        <IconComponent className="w-7 h-7 text-destructive" />
       </div>
       <div>
         <h2 className="text-xl font-bold mb-2">{title}</h2>
