@@ -30,7 +30,7 @@ import CandidateSettings from './pages/candidate/Settings';
 import EmployerDashboard from './pages/employer/Dashboard';
 import PostJob from './pages/employer/PostJob';
 import ManageJobs from './pages/employer/ManageJobs';
-import EmployerApplications from './pages/employer/EmployerApplications';
+import EmployerApplications from './pages/employer/EmployerApplications.jsx';
 import CompanyProfile from './pages/employer/CompanyProfile';
 import EmployerNotifications from './pages/employer/Notifications';
 import TeamMembers from './pages/employer/TeamMembers';
