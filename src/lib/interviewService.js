@@ -108,7 +108,7 @@ export const scheduleInterview = async (employerUid, applicationId, { scheduled_
 /**
  * Employer saves post-interview evaluation notes & rating.
  */
-export const saveInterviewEvaluation = async (employerUid, applicationId, { evaluation_notes, rating }) => {
+export const saveInterviewEvaluation = async (employerUid, applicationId, { evaluation_notes, strengths, weaknesses, recommendation, rating }) => {
   const profile = await getEmployerProfile(employerUid);
   if (!profile?.organization_id) throw new Error("No organization for this employer");
 
@@ -119,6 +119,9 @@ export const saveInterviewEvaluation = async (employerUid, applicationId, { eval
 
   await updateDoc(doc(db, "interviews", applicationId), {
     evaluation_notes: evaluation_notes || "",
+    strengths: strengths || "",
+    weaknesses: weaknesses || "",
+    recommendation: recommendation || "",
     rating: rating ?? null,
     status: "completed",
     updated_at: serverTimestamp(),

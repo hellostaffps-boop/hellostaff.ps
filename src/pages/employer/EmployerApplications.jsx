@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { FileText, ChevronDown, MessageCircle, CalendarClock, ClipboardList, Video, Sparkles } from "lucide-react";
+import { FileText, ChevronDown, MessageCircle, CalendarClock, ClipboardList, Video, Sparkles, Star, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../../components/PageHeader";
@@ -212,10 +212,28 @@ export default function EmployerApplications() {
                           )}
                           {interview.location ? ` · ${interview.location}` : ""}
                         </span>
-                        {interview.rating && (
-                          <span className="ms-auto text-amber-600 font-medium">
-                            {"★".repeat(interview.rating)}{"☆".repeat(5 - interview.rating)}
+                        {interview.rating > 0 && (
+                          <span className="ms-auto flex items-center gap-0.5 text-amber-500">
+                            {[1,2,3,4,5].map((s) => (
+                              <Star key={s} className={`w-3 h-3 ${s <= interview.rating ? "fill-amber-400 text-amber-400" : "text-amber-200"}`} />
+                            ))}
                           </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Private evaluation summary */}
+                    {interview?.recommendation && (
+                      <div className="mt-2 flex items-center gap-2 text-xs">
+                        <Lock className="w-3 h-3 text-muted-foreground" />
+                        {{
+                          strong_hire: <span className="font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">{ar ? "توظيف بقوة" : "Strong Hire"}</span>,
+                          hire: <span className="font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">{ar ? "توظيف" : "Hire"}</span>,
+                          maybe: <span className="font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">{ar ? "غير محدد" : "Maybe"}</span>,
+                          no_hire: <span className="font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">{ar ? "عدم التوظيف" : "No Hire"}</span>,
+                        }[interview.recommendation] || null}
+                        {interview.strengths && (
+                          <span className="text-muted-foreground truncate max-w-[200px]">{interview.strengths}</span>
                         )}
                       </div>
                     )}
@@ -258,17 +276,21 @@ export default function EmployerApplications() {
                       </button>
                     )}
 
-                    {/* Evaluation notes — show once scheduled */}
+                    {/* Evaluation button — show once scheduled */}
                     {interview?.scheduled_at && (
                       <button
                         onClick={() => setNotesApp(app)}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors h-8 px-2 rounded-md border border-border hover:border-accent/30"
+                        className={`flex items-center gap-1 text-xs transition-colors h-8 px-2 rounded-md border ${
+                          interview?.recommendation
+                            ? "text-white bg-primary border-primary hover:bg-primary/90"
+                            : "text-muted-foreground hover:text-accent border-border hover:border-accent/30"
+                        }`}
                       >
                         <ClipboardList className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">
-                          {interview?.evaluation_notes
-                            ? (ar ? "تعديل التقييم" : "Edit Notes")
-                            : (ar ? "تقييم المقابلة" : "Add Notes")}
+                          {interview?.recommendation
+                            ? (ar ? "تعديل التقييم" : "Edit Evaluation")
+                            : (ar ? "تقييم المقابلة" : "Evaluate")}
                         </span>
                       </button>
                     )}
