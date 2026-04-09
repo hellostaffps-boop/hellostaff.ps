@@ -23,14 +23,14 @@ function getAuthErrorMessage(code, t) {
 export default function Login() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { signInEmail, signInGoogle, userProfile, needsRoleSetup } = useFirebaseAuth();
+  const { signInEmail, signInGoogle } = useFirebaseAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const routeAfterLogin = (profile) => {
+  const routeByRole = (profile) => {
     const role = profile?.role;
     if (role === "candidate") navigate("/candidate", { replace: true });
     else if (role === "employer_owner" || role === "employer_manager") navigate("/employer", { replace: true });
@@ -43,13 +43,12 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await signInEmail(email, password);
-      // onAuthStateChanged will update userProfile; navigate based on role
-      // Give a tick for state to settle
-      setTimeout(() => {
-        // Handled by useEffect below via userProfile watch — but easiest to just push to a safe page
-        navigate("/");
-      }, 300);
+      const { profile, needsSetup } = await signInEmail(email, password);
+      if (needsSetup) {
+        navigate("/auth/complete-profile", { replace: true });
+      } else {
+        routeByRole(profile);
+      }
     } catch (err) {
       setError(getAuthErrorMessage(err.code, t));
       setLoading(false);
@@ -60,11 +59,11 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      const { isNewUser } = await signInGoogle();
+      const { isNewUser, profile } = await signInGoogle();
       if (isNewUser) {
         navigate("/auth/complete-profile", { replace: true });
       } else {
-        navigate("/", { replace: true });
+        routeByRole(profile);
       }
     } catch (err) {
       if (err.code !== "auth/popup-closed-by-user") {

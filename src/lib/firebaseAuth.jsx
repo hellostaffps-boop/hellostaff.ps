@@ -51,7 +51,11 @@ export function FirebaseAuthProvider({ children }) {
 
   const signInEmail = async (email, password) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
-    return cred.user;
+    const user = cred.user;
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+    const profile = snap.exists() ? { uid: user.uid, ...snap.data() } : null;
+    return { user, profile, needsSetup: !profile };
   };
 
   const signUpEmail = async (email, password, fullName, role) => {
@@ -64,10 +68,11 @@ export function FirebaseAuthProvider({ children }) {
   const signInGoogle = async () => {
     const cred = await signInWithPopup(auth, googleProvider);
     const user = cred.user;
-    // Check if Firestore doc exists (determines new vs returning user)
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
-    return { user, isNewUser: !snap.exists() };
+    const isNewUser = !snap.exists();
+    const profile = snap.exists() ? { uid: user.uid, ...snap.data() } : null;
+    return { user, isNewUser, profile };
   };
 
   const completeRoleSetup = async (role) => {
