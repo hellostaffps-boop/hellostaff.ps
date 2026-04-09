@@ -14,15 +14,8 @@ import InterviewScheduleModal from "@/components/InterviewScheduleModal";
 import InterviewNotesModal from "@/components/InterviewNotesModal";
 import VideoCallModal from "@/components/VideoCallModal.jsx";
 import CandidateRankingModal from "@/components/CandidateRankingModal.jsx";
+import { getStatusBadgeClass } from "@/lib/uiHelpers";
 import { toast } from "sonner";
-
-const STATUS_COLORS = {
-  submitted: "bg-yellow-50 text-yellow-700 border-yellow-200",
-  reviewing: "bg-blue-50 text-blue-700 border-blue-200",
-  shortlisted: "bg-purple-50 text-purple-700 border-purple-200",
-  rejected: "bg-red-50 text-red-700 border-red-200",
-  hired: "bg-green-50 text-green-700 border-green-200",
-};
 
 const VALID_TRANSITIONS = {
   submitted: ["reviewing", "rejected"],
@@ -188,7 +181,7 @@ export default function EmployerApplications() {
                       <span className="font-semibold text-sm">
                         {app.candidate_name || app.candidate_email}
                       </span>
-                      <Badge className={`text-xs border ${STATUS_COLORS[app.status] || "bg-secondary"}`}>
+                      <Badge className={`text-xs border ${getStatusBadgeClass(app.status)}`}>
                         {t("status", app.status) || app.status}
                       </Badge>
                     </div>

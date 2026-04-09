@@ -107,7 +107,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {stats.map((s) => <StatsCard key={s.label} {...s} />)}
       </div>
 
@@ -126,8 +126,14 @@ export default function Dashboard() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-8">
+        {/* Recent Jobs */}
         <div>
-          <h2 className="font-semibold text-base mb-4">{t("dashboard", "recentJobs")}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-base">{t("dashboard", "recentJobs")}</h2>
+            {jobs.length > 5 && (
+              <Link to="/employer/jobs" className="text-xs text-accent hover:underline">View all</Link>
+            )}
+          </div>
           {jobs.length === 0 ? (
             <EmptyState icon={Briefcase} title={t("dashboard", "noJobsYet")}
               description={t("dashboard", "noJobsYetDesc")}
@@ -135,36 +141,44 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {jobs.slice(0, 5).map((job) => (
-                <div key={job.id} className="bg-white rounded-xl border border-border p-4 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-sm">{job.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {t("status", job.status) || job.status} · {job.applications_count || 0} {t("dashboard", "applicationCount")}
+                <Link key={job.id} to={`/employer/jobs`} className="block bg-white rounded-xl border border-border p-4 hover:border-accent/30 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{job.title}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {job.applications_count || 0} {t("dashboard", "applicationCount")} · {t("status", job.status)}
+                      </div>
                     </div>
                   </div>
-                  <Link to="/employer/jobs" className="text-xs text-accent font-medium hover:underline">{t("common", "view")}</Link>
-                </div>
+                </Link>
               ))}
             </div>
           )}
         </div>
 
+        {/* Recent Applications */}
         <div>
-          <h2 className="font-semibold text-base mb-4">{t("dashboard", "recentApplications")}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-base">{t("dashboard", "recentApplications")}</h2>
+            {applications.length > 5 && (
+              <Link to="/employer/applications" className="text-xs text-accent hover:underline">View all</Link>
+            )}
+          </div>
           {applications.length === 0 ? (
             <EmptyState icon={FileText} title={t("dashboard", "noAppsYet")} description={t("dashboard", "noAppsYetDesc")} />
           ) : (
             <div className="space-y-3">
               {applications.slice(0, 5).map((app) => (
-                <div key={app.id} className="bg-white rounded-xl border border-border p-4 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-sm">{app.candidate_name || app.candidate_email}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {app.job_title} · {t("status", app.status) || app.status}
+                <Link key={app.id} to={`/employer/applications/${app.id}`} className="block bg-white rounded-xl border border-border p-4 hover:border-accent/30 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{app.candidate_name || app.candidate_email}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {app.job_title} · {t("status", app.status)}
+                      </div>
                     </div>
                   </div>
-                  <Link to="/employer/applications" className="text-xs text-accent font-medium hover:underline">{t("dashboard", "review")}</Link>
-                </div>
+                </Link>
               ))}
             </div>
           )}

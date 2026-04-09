@@ -63,8 +63,9 @@ export default function Dashboard() {
     { icon: Bookmark, label: t("dashboard", "savedJobsCount"), value: savedJobDocs.length },
   ];
 
-  const recentApps = applications.slice(0, 5);
+  const recentApps = applications.slice(0, 3);
   const recentJobs = jobs.slice(0, 5);
+  const { lang: language } = useLanguage();
 
   return (
     <div>
@@ -87,26 +88,34 @@ export default function Dashboard() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
+        {/* Recent Applications */}
         <div>
-          <h2 className="font-semibold text-base mb-4">{t("dashboard", "recentApplications")}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-base">{t("dashboard", "recentApplications")}</h2>
+            {applications.length > 3 && (
+              <Link to="/candidate/applications" className="text-xs text-accent hover:underline">View all</Link>
+            )}
+          </div>
           {recentApps.length === 0 ? (
             <EmptyState icon={FileText} title={t("dashboard", "noApplicationsYet")}
               description={t("dashboard", "noApplicationsDesc")}
               actionLabel={t("dashboard", "browseJobs")} actionPath="/candidate/jobs" />
           ) : (
-            <div className="space-y-3">
-              {recentApps.map((app) => (
-                <div key={app.id} className="bg-white rounded-xl border border-border p-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium text-sm truncate">{app.job_title || t("applications", "job")}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5 truncate">{app.organization_name}</div>
-                  </div>
-                  <Badge className={`text-xs border shrink-0 ${STATUS_COLORS[app.status] || "bg-secondary"}`}>
-                    {t("status", app.status) || app.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
+           <div className="space-y-3">
+             {recentApps.map((app) => (
+               <Link key={app.id} to={`/candidate/applications`} className="block bg-white rounded-xl border border-border p-4 hover:border-accent/30 transition-colors">
+                 <div className="flex items-start justify-between gap-3">
+                   <div className="flex-1 min-w-0">
+                     <div className="font-medium text-sm truncate">{app.job_title || t("applications", "job")}</div>
+                     <div className="text-xs text-muted-foreground mt-0.5 truncate">{app.organization_name}</div>
+                   </div>
+                   <Badge className={`text-xs border shrink-0 ${STATUS_COLORS[app.status] || "bg-secondary"}`}>
+                     {t("status", app.status) || app.status}
+                   </Badge>
+                 </div>
+               </Link>
+             ))}
+           </div>
           )}
         </div>
 
@@ -136,28 +145,28 @@ export default function Dashboard() {
 
           {/* Saved jobs widget */}
           {savedJobDocs.length > 0 && (
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold text-sm flex items-center gap-2">
-                  <Bookmark className="w-4 h-4 text-accent" /> {t("savedJobs", "title")}
-                </h2>
-                <Link to="/candidate/saved" className="text-xs text-accent hover:underline">
-                  {t("dashboard", "viewAll")}
-                </Link>
-              </div>
-              <div className="space-y-2">
-                {savedJobDocs.slice(0, 3).map((saved) => (
-                  <Link key={saved.id} to={`/jobs/${saved.job_id}`}
-                    className="flex items-center justify-between bg-white rounded-xl border border-border px-4 py-3 hover:border-accent/30 transition-colors">
-                    <div>
-                      <div className="text-sm font-medium">{saved.job_title}</div>
-                      <div className="text-xs text-muted-foreground">{saved.organization_name}</div>
-                    </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
-                  </Link>
-                ))}
-              </div>
-            </div>
+           <div className="border-t border-border pt-6">
+             <div className="flex items-center justify-between mb-3">
+               <h2 className="font-semibold text-sm flex items-center gap-2">
+                 <Bookmark className="w-4 h-4 text-accent" /> {language === "ar" ? "الوظائف المحفوظة" : "Saved jobs"}
+               </h2>
+               <Link to="/candidate/saved" className="text-xs text-accent hover:underline">
+                 {t("dashboard", "viewAll")}
+               </Link>
+             </div>
+             <div className="space-y-2">
+               {savedJobDocs.slice(0, 3).map((saved) => (
+                 <Link key={saved.id} to={`/jobs/${saved.job_id}`}
+                   className="flex items-center justify-between bg-secondary/20 rounded-lg px-3 py-2.5 hover:bg-secondary/40 transition-colors">
+                   <div className="min-w-0">
+                     <div className="text-xs font-medium truncate">{saved.job_title}</div>
+                     <div className="text-xs text-muted-foreground truncate">{saved.organization_name}</div>
+                   </div>
+                   <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0 ms-2" />
+                 </Link>
+               ))}
+             </div>
+           </div>
           )}
         </div>
       </div>
