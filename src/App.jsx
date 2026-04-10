@@ -44,6 +44,7 @@ import UsersManagement from './pages/admin/UsersManagement';
 import OrganizationsManagement from './pages/admin/OrganizationsManagement';
 import JobsModeration from './pages/admin/JobsModeration';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
+import DemoTools from './pages/admin/DemoTools';
 
 const AuthenticatedApp = () => {
   return (
@@ -103,6 +104,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/users" element={<UsersManagement />} />
         <Route path="/admin/organizations" element={<OrganizationsManagement />} />
         <Route path="/admin/jobs" element={<JobsModeration />} />
+        <Route path="/admin/demo" element={<DemoTools />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

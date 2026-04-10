@@ -11,11 +11,13 @@ import {
   FileText,
   BarChart3,
   Settings,
+  FlaskConical,
 } from "lucide-react";
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const isAr = lang === "ar";
 
   const links = [
     { label: t("dashboard", "adminTitle"), path: "/admin", icon: LayoutDashboard },
@@ -25,6 +27,7 @@ export default function AdminLayout() {
     { label: t("dashboard", "applications"), path: "/admin/applications", icon: FileText },
     { label: t("dashboard", "reports"), path: "/admin/reports", icon: BarChart3 },
     { label: t("dashboard", "settings"), path: "/admin/settings", icon: Settings },
+    { label: isAr ? "أدوات تجريبية" : "Demo Tools", path: "/admin/demo", icon: FlaskConical },
   ];
 
   return (
