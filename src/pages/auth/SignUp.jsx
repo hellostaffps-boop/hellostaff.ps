@@ -9,22 +9,37 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth } from "@/lib/supabaseAuth";
 import { cn } from "@/lib/utils";
 
-function getSupabaseSignupError(err) {
-  if (!err) return "حدث خطأ غير معروف";
-  const msg = err.message?.toLowerCase() || "";
-  const status = err.status;
+function getAuthErrorMessage(err, t) {
+  if (!err) return t("authErrors", "generic");
+  const msg = (err.message || "").toLowerCase();
+  const code = err.code || "";
 
-  if (msg.includes("signup") && msg.includes("disabled")) return "التسجيل معطّل في Supabase. تحقق من إعدادات Authentication.";
-  if (msg.includes("email") && msg.includes("disabled")) return "مزود البريد الإلكتروني معطّل في Supabase. فعّل Email provider في Dashboard.";
-  if (msg.includes("already registered") || msg.includes("user already exists") || msg.includes("duplicate")) return "هذا البريد الإلكتروني مسجّل مسبقاً. جرّب تسجيل الدخول.";
-  if (msg.includes("invalid email") || msg.includes("unable to validate")) return "البريد الإلكتروني غير صالح.";
-  if (msg.includes("password") && (msg.includes("weak") || msg.includes("short") || msg.includes("least"))) return "كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل.";
-  if (msg.includes("rate limit") || msg.includes("too many")) return "طلبات كثيرة جداً. انتظر قليلاً وأعد المحاولة.";
-  if (status === 0 || msg.includes("fetch") || msg.includes("network")) return "خطأ في الشبكة. تحقق من اتصالك بالإنترنت.";
-  if (msg.includes("supabase") || msg.includes("url") || msg.includes("key") || msg.includes("anon")) return "خطأ في إعداد Supabase (URL أو مفتاح anon). تحقق من المتغيرات البيئية.";
-  if (status >= 500) return `خطأ في خادم Supabase (${status}). حاول مجدداً لاحقاً.`;
-  // Show raw message as last resort so it's never hidden
-  return err.message || "حدث خطأ أثناء إنشاء الحساب.";
+  if (msg.includes("missing_config") || msg.includes("invalid_key") || msg.includes("missing config")) {
+    return `\u274C Config error: ${err.message}`;
+  }
+  if (msg.includes("already registered") || msg.includes("user already") || code === "user_already_exists") {
+    return t("authErrors", "emailInUse");
+  }
+  if (msg.includes("invalid email") || msg.includes("invalid_email")) {
+    return t("authErrors", "invalidEmail");
+  }
+  if (msg.includes("password") || msg.includes("weak")) {
+    return t("authErrors", "weakPassword");
+  }
+  if (msg.includes("signup is disabled") || msg.includes("signups not allowed") || msg.includes("email signups are disabled")) {
+    return "\u274C Signup is disabled in Supabase — enable Email provider in Authentication > Providers.";
+  }
+  if (msg.includes("email provider") || msg.includes("provider is disabled")) {
+    return "\u274C Email provider is disabled in your Supabase project.";
+  }
+  if (msg.includes("network") || msg.includes("failed to fetch") || msg.includes("networkerror")) {
+    return "\u274C Network error — cannot reach Supabase. Check VITE_SUPABASE_URL.";
+  }
+  if (msg.includes("invalid api key") || msg.includes("apikey") || msg.includes("no api key")) {
+    return "\u274C Invalid Supabase API key. Check VITE_SUPABASE_PUBLISHABLE_KEY.";
+  }
+  // Show raw message so nothing is hidden
+  return err.message || t("authErrors", "generic");
 }
 
 export default function SignUp() {
@@ -53,8 +68,8 @@ export default function SignUp() {
       await signUpEmail(email, password, fullName, role);
       navigate(role === "candidate" ? "/candidate" : "/employer", { replace: true });
     } catch (err) {
-      console.error("[SignUp] caught error:", err);
-      setError(getSupabaseSignupError(err));
+      console.error("[SignUp] handleSignUp error:", err);
+      setError(getAuthErrorMessage(err, t));
       setLoading(false);
     }
   };

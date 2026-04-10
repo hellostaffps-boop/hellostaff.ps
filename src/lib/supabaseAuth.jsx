@@ -115,8 +115,12 @@ export function SupabaseAuthProvider({ children }) {
     const ALLOWED = ["candidate", "employer_owner"];
     if (!ALLOWED.includes(role)) throw new Error("Invalid role selection");
 
-    console.log("[Supabase signUp] Attempting signup for:", email, "role:", role);
-    console.log("[Supabase signUp] Client URL:", supabase.supabaseUrl || "(check supabaseClient)");
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!supabaseUrl || !supabaseKey) throw new Error("MISSING_CONFIG: Supabase URL or anon key not configured.");
+    if (!supabaseKey.startsWith("eyJ")) throw new Error("INVALID_KEY: Supabase anon key appears invalid (must be a JWT starting with 'eyJ').");
+
+    console.log("[signUpEmail] Attempting Supabase signUp for:", email, "role:", role);
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -127,12 +131,11 @@ export function SupabaseAuthProvider({ children }) {
     });
 
     if (error) {
-      console.error("[Supabase signUp] RAW ERROR:", error);
-      console.error("[Supabase signUp] status:", error.status, "code:", error.code, "message:", error.message);
+      console.error("[signUpEmail] Supabase signUp error:", error);
       throw error;
     }
 
-    console.log("[Supabase signUp] SUCCESS — user id:", data.user?.id, "session:", !!data.session);
+    console.log("[signUpEmail] Supabase signUp success. User ID:", data.user?.id, "Session:", !!data.session);
     return data.user;
   };
 

@@ -1,13 +1,21 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://djmolexscnrzbwvuziaq.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_NiNMXKHeNne1K76PzC0j3Q_lepGr";
-
-console.log("[supabaseClient] URL:", supabaseUrl);
-console.log("[supabaseClient] Key prefix:", supabaseAnonKey?.slice(0, 20));
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("[supabaseClient] MISSING env vars! Signup/login will fail.");
+  console.error(
+    "[Supabase] MISSING ENV VARS — VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY is not set.\n" +
+    `URL: ${supabaseUrl || '(missing)'}\nKey: ${supabaseAnonKey ? supabaseAnonKey.slice(0, 20) + '...' : '(missing)'}`
+  );
+}
+
+if (supabaseAnonKey && !supabaseAnonKey.startsWith("eyJ")) {
+  console.error(
+    "[Supabase] INVALID ANON KEY — The key does not look like a Supabase JWT token (should start with 'eyJ').\n" +
+    "You may have set a Base44 publishable key instead of the Supabase anon key.\n" +
+    "Go to your Supabase project → Settings → API → anon/public key."
+  );
 }
 
 let _client = null;
