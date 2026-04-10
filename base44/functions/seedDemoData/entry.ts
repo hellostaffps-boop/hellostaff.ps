@@ -359,6 +359,7 @@ Deno.serve(async (req) => {
       },
     });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // Return 200 so the frontend can read the actual error message
+    return Response.json({ success: false, error: error.message });
   }
 });

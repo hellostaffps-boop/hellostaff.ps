@@ -48,7 +48,11 @@ export default function DemoTools() {
     setMessage(null);
     try {
       const res = await base44.functions.invoke("getDemoStatus", { session_token: token });
-      setStatus(res.data);
+      if (res.data?.error) {
+        setMessage({ type: "error", text: isAr ? `خطأ في جلب الحالة: ${res.data.error}` : `Status fetch error: ${res.data.error}` });
+      } else {
+        setStatus(res.data);
+      }
     } catch (e) {
       setMessage({ type: "error", text: isAr ? `خطأ في جلب الحالة: ${e.message}` : `Status fetch error: ${e.message}` });
     } finally {
@@ -65,7 +69,7 @@ export default function DemoTools() {
     try {
       const res = await base44.functions.invoke("seedDemoData", { session_token: token, force });
       const d = res.data;
-      if (d.error === "DEMO_EXISTS") {
+      if (d.error === "DEMO_EXISTS" || d.existing_batch_id) {
         setConfirmForce(true);
         setMessage({ type: "warn", text: isAr ? `توجد بيانات تجريبية بالفعل (${d.existing_batch_id}). هل تريد إنشاء دفعة جديدة؟` : `Demo data already exists (${d.existing_batch_id}). Create a new batch anyway?` });
       } else if (d.success) {
