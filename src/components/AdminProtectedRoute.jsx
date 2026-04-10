@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { getAdminSession, getSessionExpirationStatus } from '@/lib/adminSessionManager';
+import { getAdminSession, getAdminToken, getSessionExpirationStatus } from '@/lib/adminSessionManager';
 
 export default function AdminProtectedRoute({ children }) {
   const [accessState, setAccessState] = useState(null);
@@ -14,18 +14,25 @@ export default function AdminProtectedRoute({ children }) {
   const checkAccess = async () => {
     try {
       const session = getAdminSession();
-      const timeoutMinutes = 30; // default timeout
+      const token = getAdminToken();
+      const timeoutMinutes = 30;
 
-      // Check if session expired
+      if (!session || !token) {
+        setAccessState({ authenticated: false, reason: 'no_session' });
+        setLoading(false);
+        return;
+      }
+
+      // Check session timeout
       const expStatus = getSessionExpirationStatus(timeoutMinutes);
-      if (expStatus.expired && session) {
+      if (expStatus.expired) {
         setAccessState({ authenticated: false, reason: 'session_expired' });
         setLoading(false);
         return;
       }
 
-      // Check Firebase auth + admin role
-      const response = await base44.functions.invoke('getAdminAccessState', {});
+      // Verify token with backend
+      const response = await base44.functions.invoke('getAdminAccessState', { session_token: token });
 
       if (response.data?.is_admin) {
         setAccessState({ authenticated: true, is_admin: true });

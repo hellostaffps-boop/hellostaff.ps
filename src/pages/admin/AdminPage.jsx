@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import AdminLogin from '@/components/AdminLogin';
 import { base44 } from '@/api/base44Client';
+import { getAdminToken } from '@/lib/adminSessionManager';
 
 export default function AdminPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -13,9 +14,12 @@ export default function AdminPage() {
 
   const checkAdminStatus = async () => {
     try {
-      const response = await base44.functions.invoke('getAdminAccessState', {});
-      if (response.data?.is_admin) {
-        setIsAdmin(true);
+      const token = getAdminToken();
+      if (token) {
+        const response = await base44.functions.invoke('getAdminAccessState', { session_token: token });
+        if (response.data?.is_admin) {
+          setIsAdmin(true);
+        }
       }
     } catch {
       // Not admin or not authenticated

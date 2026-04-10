@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/hooks/useLanguage';
 import { base44 } from '@/api/base44Client';
-import { setAdminSession } from '@/lib/adminSessionManager';
+import { setAdminSession, getAdminToken } from '@/lib/adminSessionManager';
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -23,12 +23,16 @@ export default function AdminLogin() {
 
   const checkAdminStatus = async () => {
     try {
-      const response = await base44.functions.invoke('getAdminAccessState', {});
-      if (response.data?.is_admin) {
-        navigate('/admin/dashboard');
+      const token = getAdminToken();
+      if (token) {
+        const response = await base44.functions.invoke('getAdminAccessState', { session_token: token });
+        if (response.data?.is_admin) {
+          navigate('/admin/dashboard');
+          return;
+        }
       }
     } catch {
-      // User not authenticated or not admin
+      // Not admin
     } finally {
       setAuthenticating(false);
     }
@@ -41,9 +45,7 @@ export default function AdminLogin() {
 
     try {
       // Validate password via backend
-      const validateResponse = await base44.functions.invoke('validateAdminPassword', {
-        password,
-      });
+      const validateResponse = await base44.functions.invoke('validateAdminPassword', { password });
 
       if (!validateResponse.data?.success) {
         setError(ar ? 'كلمة مرور غير صحيحة' : 'Invalid password');
@@ -51,19 +53,10 @@ export default function AdminLogin() {
         return;
       }
 
-      // Bootstrap admin access
-      const bootstrapResponse = await base44.functions.invoke('bootstrapAdminAccess', {});
-
-      if (bootstrapResponse.data?.success) {
-        // Set session
-        setAdminSession({
-          admin_id: validateResponse.data.user_id,
-          admin_email: validateResponse.data.user_email,
-        });
-
-        // Navigate to dashboard
-        navigate('/admin/dashboard');
-      }
+      // Generate session token (base64 of password — same as backend checks)
+      const token = btoa(password);
+      setAdminSession({ logged_in: true }, token);
+      navigate('/admin/dashboard');
     } catch (err) {
       setError(
         ar

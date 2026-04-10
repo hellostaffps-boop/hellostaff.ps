@@ -1,43 +1,23 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
-
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const body = await req.json().catch(() => ({}));
+    const { session_token } = body;
 
-    if (!user) {
-      return Response.json(
-        { error: 'Not authenticated', authenticated: false },
-        { status: 401 }
-      );
+    const adminPassword = Deno.env.get('ADMIN_PANEL_PASSWORD');
+
+    // Validate the session token (we use the password hash as session token)
+    if (!session_token || !adminPassword) {
+      return Response.json({ is_admin: false, authenticated: false });
     }
 
-    const isAdmin = user.role === 'platform_admin';
-
-    if (isAdmin) {
-      // Audit dashboard access
-      await base44.asServiceRole.entities.AuditLog.create({
-        action: 'admin_dashboard_access',
-        actor_uid: user.id,
-        actor_email: user.email,
-        actor_role: user.role,
-        payload_summary: `Admin accessed dashboard`,
-        status: 'success',
-      });
-    }
+    const isValid = session_token === btoa(adminPassword);
 
     return Response.json({
-      authenticated: true,
-      is_admin: isAdmin,
-      user_id: user.id,
-      user_email: user.email,
-      user_role: user.role,
+      is_admin: isValid,
+      authenticated: isValid,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    return Response.json(
-      { error: error.message, authenticated: false },
-      { status: 500 }
-    );
+    return Response.json({ is_admin: false, authenticated: false, error: error.message });
   }
 });

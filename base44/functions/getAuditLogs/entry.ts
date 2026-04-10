@@ -2,31 +2,20 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const body = await req.json().catch(() => ({}));
+    const { session_token } = body;
 
-    if (!user || user.role !== 'platform_admin') {
-      return Response.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+    const adminPassword = Deno.env.get('ADMIN_PANEL_PASSWORD');
+
+    if (!session_token || !adminPassword || session_token !== btoa(adminPassword)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get recent audit logs (last 100)
-    const logs = await base44.asServiceRole.entities.AuditLog.list(
-      '-created_date',
-      100
-    );
+    const base44 = createClientFromRequest(req);
+    const logs = await base44.asServiceRole.entities.AuditLog.list('-created_date', 50);
 
-    return Response.json({
-      success: true,
-      count: logs.length,
-      logs,
-    });
+    return Response.json({ logs });
   } catch (error) {
-    return Response.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return Response.json({ logs: [], error: error.message });
   }
 });

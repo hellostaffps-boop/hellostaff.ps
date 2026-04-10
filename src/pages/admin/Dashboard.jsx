@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { base44 } from '@/api/base44Client';
-import { updateLastActivity } from '@/lib/adminSessionManager';
+import { updateLastActivity, getAdminToken } from '@/lib/adminSessionManager';
 import PageHeader from '@/components/PageHeader';
 import { Users, Building2, Briefcase, FileText, AlertCircle, BarChart3, Lock, Clock } from 'lucide-react';
 import StatsCard from '@/components/StatsCard';
@@ -31,7 +31,8 @@ export default function AdminDashboard() {
 
   const loadAuditLogs = async () => {
     try {
-      const response = await base44.functions.invoke('getAuditLogs', {});
+      const token = getAdminToken();
+      const response = await base44.functions.invoke('getAuditLogs', { session_token: token });
       setAuditLogs(response.data?.logs || []);
     } catch (err) {
       console.error('Error loading audit logs:', err);
