@@ -6,11 +6,11 @@ import { Label } from "@/components/ui/label";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 
 export default function ForgotPassword() {
   const { t, isRTL } = useLanguage();
-  const { resetPassword } = useFirebaseAuth();
+  const { resetPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);

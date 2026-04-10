@@ -1,11 +1,11 @@
 import { Navigate, Outlet } from "react-router-dom";
 import AccessDenied from "@/components/AccessDenied";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 
 // allowedRoles: array of role strings. Empty = any authenticated user.
 export default function ProtectedRoute({ allowedRoles = [], redirectTo = "/auth/login" }) {
-  const { firebaseUser, userProfile, loading, needsRoleSetup } = useFirebaseAuth();
+  const { user, userProfile, loading, needsRoleSetup } = useAuth();
   const { t } = useLanguage();
 
   if (loading) {
@@ -16,7 +16,7 @@ export default function ProtectedRoute({ allowedRoles = [], redirectTo = "/auth/
     );
   }
 
-  if (!firebaseUser) {
+  if (!user) {
     return <Navigate to={redirectTo} replace />;
   }
 

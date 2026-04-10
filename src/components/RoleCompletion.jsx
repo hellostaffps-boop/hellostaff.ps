@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Briefcase, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 import { cn } from "@/lib/utils";
 
 export default function RoleCompletion() {
   const { t } = useLanguage();
-  const { completeRoleSetup, firebaseUser } = useFirebaseAuth();
+  const { completeRoleSetup, user } = useAuth();
   const navigate = useNavigate();
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export default function RoleCompletion() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">{t("auth", "accountType")}</h1>
           <p className="text-sm text-muted-foreground mt-2">
-            {firebaseUser?.email}
+            {user?.email}
           </p>
         </div>
 
