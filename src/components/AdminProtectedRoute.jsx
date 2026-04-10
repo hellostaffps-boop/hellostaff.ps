@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { getAdminSession, getAdminToken, getSessionExpirationStatus } from '@/lib/adminSessionManager';
 
@@ -58,5 +58,5 @@ export default function AdminProtectedRoute({ children }) {
     return <Navigate to="/admin" replace />;
   }
 
-  return children;
+  return children ?? <Outlet />;
 }

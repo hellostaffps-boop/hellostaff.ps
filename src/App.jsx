@@ -40,6 +40,9 @@ import TeamMembers from './pages/employer/TeamMembers';
 import ApplicationChat from './pages/ApplicationChat';
 import AdminPage from './pages/admin/AdminPage';
 import AdminDashboard from './pages/admin/Dashboard';
+import UsersManagement from './pages/admin/UsersManagement';
+import OrganizationsManagement from './pages/admin/OrganizationsManagement';
+import JobsModeration from './pages/admin/JobsModeration';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -95,14 +98,12 @@ const AuthenticatedApp = () => {
 
       {/* Admin routes — secure hidden access */}
       <Route path="/admin" element={<AdminPage />} />
-      <Route
-        path="/admin/dashboard"
-        element={
-          <AdminProtectedRoute>
-            <AdminDashboard />
-          </AdminProtectedRoute>
-        }
-      />
+      <Route element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<UsersManagement />} />
+        <Route path="/admin/organizations" element={<OrganizationsManagement />} />
+        <Route path="/admin/jobs" element={<JobsModeration />} />
+      </Route>
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
