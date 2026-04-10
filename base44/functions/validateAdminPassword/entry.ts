@@ -16,12 +16,12 @@ Deno.serve(async (req) => {
     }
 
     if (password !== adminPassword) {
-      return Response.json({ success: false, error: 'Invalid password' }, { status: 403 });
+      return Response.json({ success: false, error: 'Invalid password' });
     }
 
     // Check email restriction if configured
     if (superAdminEmail && email && email !== superAdminEmail) {
-      return Response.json({ success: false, error: 'Email not authorized' }, { status: 403 });
+      return Response.json({ success: false, error: 'Email not authorized' });
     }
 
     return Response.json({ success: true, message: 'Password validated' });
