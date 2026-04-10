@@ -115,14 +115,14 @@ const AuthenticatedApp = () => {
 function App() {
   return (
     <LanguageProvider>
-      <FirebaseAuthProvider>
+      <SupabaseAuthProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <AuthenticatedApp />
           </Router>
           <Toaster />
         </QueryClientProvider>
-      </FirebaseAuthProvider>
+      </SupabaseAuthProvider>
     </LanguageProvider>
   );
 }
