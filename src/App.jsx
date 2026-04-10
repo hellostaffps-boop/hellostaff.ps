@@ -4,7 +4,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { LanguageProvider } from '@/hooks/useLanguage';
-import { FirebaseAuthProvider } from '@/lib/firebaseAuth';
+import { SupabaseAuthProvider } from '@/lib/supabaseAuth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import RoleCompletion from '@/components/RoleCompletion';
 import Login from './pages/auth/Login';
