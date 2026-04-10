@@ -120,7 +120,7 @@ export function SupabaseAuthProvider({ children }) {
     if (!supabaseUrl || !supabaseKey) throw new Error("MISSING_CONFIG: Supabase URL or anon key not configured.");
     if (!supabaseKey.startsWith("eyJ")) throw new Error("INVALID_KEY: Supabase anon key appears invalid (must be a JWT starting with 'eyJ').");
 
-    console.log("[signUpEmail] Attempting Supabase signUp for:", email, "role:", role);
+    console.log("[signUpEmail] Attempting Supabase signUp for:", email, "role:", role, "lang:", preferredLanguage);
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -131,12 +131,13 @@ export function SupabaseAuthProvider({ children }) {
     });
 
     if (error) {
-      console.error("[signUpEmail] Supabase signUp error:", error);
+      console.error("[signUpEmail] Supabase signUp error — code:", error.code, "status:", error.status, "msg:", error.message);
       throw error;
     }
 
-    console.log("[signUpEmail] Supabase signUp success. User ID:", data.user?.id, "Session:", !!data.session);
-    return data.user;
+    console.log("[signUpEmail] Supabase signUp success. User ID:", data.user?.id, "Has session:", !!data.session);
+    // Return both so callers can detect email-confirmation-required vs immediate session
+    return { user: data.user, session: data.session };
   };
 
   const logout = async () => {

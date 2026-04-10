@@ -7,6 +7,7 @@ import { Eye, EyeOff, Briefcase, Search } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth } from "@/lib/supabaseAuth";
+import { supabase } from "@/lib/supabaseClient";
 import { cn } from "@/lib/utils";
 
 function getAuthErrorMessage(err, t) {
@@ -64,14 +65,57 @@ export default function SignUp() {
     if (!role) { setError(t("authErrors", "selectRole")); return; }
     setError("");
     setLoading(true);
+
+    // Step 1: Auth signup
+    let signUpResult;
     try {
-      await signUpEmail(email, password, fullName, role);
-      navigate(role === "candidate" ? "/candidate" : "/employer", { replace: true });
+      signUpResult = await signUpEmail(email, password, fullName, role);
     } catch (err) {
-      console.error("[SignUp] handleSignUp error:", err);
+      console.error("[SignUp] Step 1 — auth signup failed:", err);
       setError(getAuthErrorMessage(err, t));
       setLoading(false);
+      return;
     }
+
+    const { user: newUser, session } = signUpResult;
+
+    // Step 2: If no immediate session (email confirmation required), tell the user
+    if (!session) {
+      console.log("[SignUp] Step 2 — no session yet (email confirmation likely required)");
+      setError("✅ Account created! Please check your email to confirm your address before signing in.");
+      setLoading(false);
+      return;
+    }
+
+    console.log("[SignUp] Step 2 — session obtained. Polling for profile row...");
+
+    // Step 3: Poll for profile row (trigger may take a moment)
+    let profile = null;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      await new Promise((r) => setTimeout(r, attempt * 400));
+      const { data, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", newUser.id)
+        .single();
+      console.log(`[SignUp] Step 3 — profile poll attempt ${attempt}:`, data ? "found" : profileError?.message);
+      if (data) { profile = data; break; }
+    }
+
+    if (!profile) {
+      console.error("[SignUp] Step 3 — profile row never appeared after 5 attempts");
+      setError("⚠️ Account created but profile setup failed. Please try signing in — your account exists.");
+      setLoading(false);
+      return;
+    }
+
+    console.log("[SignUp] Step 4 — routing by role:", profile.role);
+
+    // Step 4: Route by confirmed profile role
+    const dest = profile.role === "candidate" ? "/candidate"
+      : (profile.role === "employer_owner" || profile.role === "employer_manager") ? "/employer"
+      : "/auth/complete-profile";
+    navigate(dest, { replace: true });
   };
 
 
