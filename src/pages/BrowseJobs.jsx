@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import JobCard from "../components/JobCard";
 import EmptyState from "../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 import { getPublishedJobs, getCandidateProfile, getCurrentCandidateApplications } from "@/lib/firestoreService";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
 
@@ -15,7 +15,7 @@ const INITIAL_FILTERS = { search: "", category: "all", employment: "all", locati
 
 export default function BrowseJobs() {
   const { t } = useLanguage();
-  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const { user: firebaseUser, userProfile } = useAuth();
   const isCandidate = userProfile?.role === "candidate";
   const { savedJobIds, toggleSave } = useSavedJobs();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
