@@ -9,14 +9,22 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth } from "@/lib/supabaseAuth";
 import { cn } from "@/lib/utils";
 
-function getAuthErrorMessage(code, t) {
-  const map = {
-    "auth/email-already-in-use": t("authErrors", "emailInUse"),
-    "auth/weak-password": t("authErrors", "weakPassword"),
-    "auth/invalid-email": t("authErrors", "invalidEmail"),
-    "auth/popup-closed-by-user": t("authErrors", "popupClosed"),
-  };
-  return map[code] || t("authErrors", "generic");
+function getSupabaseSignupError(err) {
+  if (!err) return "حدث خطأ غير معروف";
+  const msg = err.message?.toLowerCase() || "";
+  const status = err.status;
+
+  if (msg.includes("signup") && msg.includes("disabled")) return "التسجيل معطّل في Supabase. تحقق من إعدادات Authentication.";
+  if (msg.includes("email") && msg.includes("disabled")) return "مزود البريد الإلكتروني معطّل في Supabase. فعّل Email provider في Dashboard.";
+  if (msg.includes("already registered") || msg.includes("user already exists") || msg.includes("duplicate")) return "هذا البريد الإلكتروني مسجّل مسبقاً. جرّب تسجيل الدخول.";
+  if (msg.includes("invalid email") || msg.includes("unable to validate")) return "البريد الإلكتروني غير صالح.";
+  if (msg.includes("password") && (msg.includes("weak") || msg.includes("short") || msg.includes("least"))) return "كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل.";
+  if (msg.includes("rate limit") || msg.includes("too many")) return "طلبات كثيرة جداً. انتظر قليلاً وأعد المحاولة.";
+  if (status === 0 || msg.includes("fetch") || msg.includes("network")) return "خطأ في الشبكة. تحقق من اتصالك بالإنترنت.";
+  if (msg.includes("supabase") || msg.includes("url") || msg.includes("key") || msg.includes("anon")) return "خطأ في إعداد Supabase (URL أو مفتاح anon). تحقق من المتغيرات البيئية.";
+  if (status >= 500) return `خطأ في خادم Supabase (${status}). حاول مجدداً لاحقاً.`;
+  // Show raw message as last resort so it's never hidden
+  return err.message || "حدث خطأ أثناء إنشاء الحساب.";
 }
 
 export default function SignUp() {
@@ -45,10 +53,8 @@ export default function SignUp() {
       await signUpEmail(email, password, fullName, role);
       navigate(role === "candidate" ? "/candidate" : "/employer", { replace: true });
     } catch (err) {
-      const m = err.message?.toLowerCase() || "";
-      if (m.includes("already")) setError(t("authErrors", "emailInUse"));
-      else if (m.includes("password")) setError(t("authErrors", "weakPassword"));
-      else setError(t("authErrors", "generic"));
+      console.error("[SignUp] caught error:", err);
+      setError(getSupabaseSignupError(err));
       setLoading(false);
     }
   };

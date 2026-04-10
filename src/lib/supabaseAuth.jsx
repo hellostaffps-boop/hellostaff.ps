@@ -114,6 +114,10 @@ export function SupabaseAuthProvider({ children }) {
   const signUpEmail = async (email, password, fullName, role, preferredLanguage = "ar") => {
     const ALLOWED = ["candidate", "employer_owner"];
     if (!ALLOWED.includes(role)) throw new Error("Invalid role selection");
+
+    console.log("[Supabase signUp] Attempting signup for:", email, "role:", role);
+    console.log("[Supabase signUp] Client URL:", supabase.supabaseUrl || "(check supabaseClient)");
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -121,7 +125,14 @@ export function SupabaseAuthProvider({ children }) {
         data: { full_name: fullName, role, preferred_language: preferredLanguage },
       },
     });
-    if (error) throw error;
+
+    if (error) {
+      console.error("[Supabase signUp] RAW ERROR:", error);
+      console.error("[Supabase signUp] status:", error.status, "code:", error.code, "message:", error.message);
+      throw error;
+    }
+
+    console.log("[Supabase signUp] SUCCESS — user id:", data.user?.id, "session:", !!data.session);
     return data.user;
   };
 
