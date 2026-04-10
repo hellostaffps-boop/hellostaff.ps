@@ -66,6 +66,8 @@ export default function BrowseJobs() {
   const { data: myApplications = [] } = useQuery({
     queryKey: ["my-applications", firebaseUser?.email],
     queryFn: () => getCurrentCandidateApplications(firebaseUser.email),
+    enabled: !!firebaseUser && isCandidate,
+  });
 
   const appliedJobIds = useMemo(() => new Set(myApplications.map((a) => a.job_id)), [myApplications]);
 
@@ -98,10 +100,10 @@ export default function BrowseJobs() {
         };
         return score(b) - score(a);
       }
-      return dateB - dateA; // newest
+      return dateB - dateA;
     });
     return list;
-  }, [jobs, filters]);
+  }, [jobs, filters, candidateProfile]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

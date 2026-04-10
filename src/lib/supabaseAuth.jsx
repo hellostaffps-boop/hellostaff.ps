@@ -3,7 +3,6 @@ import { supabase } from "@/lib/supabaseClient";
 
 const SupabaseAuthContext = createContext(null);
 
-// Recovery UI shown if user is authenticated but profile row is missing/broken
 function ProfileRecoveryScreen({ onRetry, loading }) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-secondary/30">
@@ -46,22 +45,55 @@ export function SupabaseAuthProvider({ children }) {
   const [profileError, setProfileError] = useState(false);
   const [retrying, setRetrying] = useState(false);
 
-  // Normalize Supabase user to include .uid = .email for backward compat with
-  // pages/services that call getCandidateProfile(firebaseUser.uid) etc.
   const normalizeUser = (u) => u ? { ...u, uid: u.email } : null;
 
   const loadProfile = useCallback(async (userId, { silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (profile) {
+        setUserProfile(profile);
+        setNeedsRoleSetup(!profile.role);
+        setProfileError(false);
+      } else {
+        setUserProfile(null);
+        setNeedsRoleSetup(true);
+        setProfileError(false);
+      }
+    } catch {
+      setProfileError(true);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    // Bootstrap on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(normalizeUser(session.user));
+        loadProfile(session.user.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
+    });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(normalizeUser(session.user));
+        loadProfile(session.user.id);
+      } else {
+        setUser(null);
+        setUserProfile(null);
+        setNeedsRoleSetup(false);
+        setProfileError(false);
+        setLoading(false);
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, [loadProfile]);
@@ -86,8 +118,6 @@ export function SupabaseAuthProvider({ children }) {
     if (!supabaseUrl || !supabaseKey) throw new Error("MISSING_CONFIG: Supabase URL or anon key not configured.");
     if (!supabaseKey.startsWith("eyJ")) throw new Error("INVALID_KEY: Supabase anon key appears invalid (must be a JWT starting with 'eyJ').");
 
-    console.log("[signUpEmail] Attempting Supabase signUp for:", email, "role:", role, "lang:", preferredLanguage);
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -96,13 +126,7 @@ export function SupabaseAuthProvider({ children }) {
       },
     });
 
-    if (error) {
-      console.error("[signUpEmail] Supabase signUp error — code:", error.code, "status:", error.status, "msg:", error.message);
-      throw error;
-    }
-
-    console.log("[signUpEmail] Supabase signUp success. User ID:", data.user?.id, "Has session:", !!data.session);
-    // Return both so callers can detect email-confirmation-required vs immediate session
+    if (error) throw error;
     return { user: data.user, session: data.session };
   };
 
@@ -146,7 +170,6 @@ export function SupabaseAuthProvider({ children }) {
     setRetrying(false);
   };
 
-  // Show recovery screen if authenticated but profile is broken (not just missing)
   if (user && !loading && profileError) {
     return <ProfileRecoveryScreen onRetry={handleRetry} loading={retrying} />;
   }
@@ -155,7 +178,7 @@ export function SupabaseAuthProvider({ children }) {
     <SupabaseAuthContext.Provider
       value={{
         user,
-        firebaseUser: user, // compat alias — components checking firebaseUser still work
+        firebaseUser: user,
         userProfile,
         loading,
         needsRoleSetup,
@@ -179,5 +202,4 @@ export function useAuth() {
   return ctx;
 }
 
-// Compatibility alias — existing pages importing useFirebaseAuth will work unchanged
 export const useFirebaseAuth = useAuth;
