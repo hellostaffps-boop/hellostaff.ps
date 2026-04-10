@@ -3,7 +3,7 @@ import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/hooks/useLanguage";
-import { subscribeToApplicationMessages, sendApplicationMessage } from "@/lib/firestoreService";
+import { base44 } from "@/api/base44Client";
 
 export default function MessageThread({ applicationId, currentUser, senderRole }) {
   const { t } = useLanguage();
@@ -15,11 +15,23 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
 
   useEffect(() => {
     if (!applicationId) return;
-    const unsub = subscribeToApplicationMessages(applicationId, (msgs) => {
-      setMessages(msgs);
-      setLoading(false);
+
+    // Load initial messages
+    base44.entities.ApplicationMessage.filter({ application_id: applicationId }, "created_date")
+      .then((msgs) => {
+        setMessages(msgs);
+        setLoading(false);
+      });
+
+    // Subscribe to new messages
+    const unsubscribe = base44.entities.ApplicationMessage.subscribe((event) => {
+      if (event.data?.application_id === applicationId) {
+        base44.entities.ApplicationMessage.filter({ application_id: applicationId }, "created_date")
+          .then(setMessages);
+      }
     });
-    return () => unsub();
+
+    return () => unsubscribe();
   }, [applicationId]);
 
   useEffect(() => {
@@ -31,9 +43,10 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
     if (!trimmed || sending) return;
     setSending(true);
     setText("");
-    await sendApplicationMessage(applicationId, {
-      sender_uid: currentUser.uid,
-      sender_name: currentUser.displayName || currentUser.email,
+    await base44.entities.ApplicationMessage.create({
+      application_id: applicationId,
+      sender_email: currentUser.email || currentUser.uid,
+      sender_name: currentUser.user_metadata?.full_name || currentUser.displayName || currentUser.email,
       sender_role: senderRole,
       message: trimmed,
     });
@@ -47,6 +60,8 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
     }
   };
 
+  const senderEmail = currentUser?.email || currentUser?.uid;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
@@ -57,7 +72,6 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
 
   return (
     <div className="flex flex-col h-full">
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-3 px-1 py-2 min-h-0">
         {messages.length === 0 ? (
           <p className="text-center text-xs text-muted-foreground py-8">
@@ -65,7 +79,7 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
           </p>
         ) : (
           messages.map((msg) => {
-            const isOwn = msg.sender_uid === currentUser.uid;
+            const isOwn = msg.sender_email === senderEmail;
             return (
               <div key={msg.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
@@ -80,8 +94,8 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
                     {isOwn ? t("messaging", "you") : msg.sender_name}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {msg.created_at?.toDate
-                      ? msg.created_at.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    {msg.created_date
+                      ? new Date(msg.created_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                       : ""}
                   </span>
                 </div>
@@ -92,7 +106,6 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="flex items-center gap-2 pt-3 border-t border-border mt-2">
         <Input
           value={text}

@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MessageCircle } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 import { getApplicationById } from "@/lib/firestoreService";
 import { Badge } from "@/components/ui/badge";
 import MessageThread from "@/components/MessageThread";
@@ -18,7 +18,7 @@ const STATUS_COLORS = {
 export default function ApplicationChat() {
   const { id } = useParams();
   const { t } = useLanguage();
-  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const { user: firebaseUser, userProfile } = useAuth();
 
   const { data: application, isLoading } = useQuery({
     queryKey: ["application", id],
@@ -51,7 +51,7 @@ export default function ApplicationChat() {
   }
 
   // Guard: candidate can only see their own application chat
-  if (isCandidate && application.candidate_user_id !== firebaseUser?.uid) {
+  if (isCandidate && application.candidate_email !== firebaseUser?.email) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <p className="text-muted-foreground">{t("messaging", "forbidden")}</p>

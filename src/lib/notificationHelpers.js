@@ -34,21 +34,11 @@ export const dismissToast = (id) => {
 };
 
 /**
- * Handle Firebase errors with user-friendly messages
+ * Handle generic errors with user-friendly messages
  */
 export const handleFirebaseError = (error, t, context = "") => {
   console.error(`Error in ${context}:`, error);
-
-  const errorMap = {
-    "permission-denied": t ? t("errors", "permissionDenied") : "You don't have permission to perform this action",
-    "not-found": t ? t("errors", "notFound") : "The requested resource was not found",
-    "already-exists": t ? t("errors", "alreadyExists") : "This resource already exists",
-    "invalid-argument": t ? t("errors", "invalidData") : "The data provided is invalid",
-    "internal": t ? t("errors", "serverError") : "A server error occurred",
-    "unavailable": t ? t("errors", "serviceUnavailable") : "The service is temporarily unavailable",
-  };
-
-  const message = errorMap[error.code] || (t ? t("errors", "generic") : "Something went wrong. Please try again.");
+  const message = t ? t("errors", "generic") : "Something went wrong. Please try again.";
   showError(message);
   return message;
 };

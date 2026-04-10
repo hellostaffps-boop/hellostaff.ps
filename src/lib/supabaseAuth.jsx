@@ -46,56 +46,22 @@ export function SupabaseAuthProvider({ children }) {
   const [profileError, setProfileError] = useState(false);
   const [retrying, setRetrying] = useState(false);
 
-  const loadProfile = useCallback(async (userId, { silent = false } = {}) => {
-    if (!silent) setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+  // Normalize Supabase user to include .uid = .email for backward compat with
+  // pages/services that call getCandidateProfile(firebaseUser.uid) etc.
+  const normalizeUser = (u) => u ? { ...u, uid: u.email } : null;
 
-      if (error || !data) {
-        setUserProfile(null);
-        setNeedsRoleSetup(true);
-        setProfileError(false);
-      } else {
-        setUserProfile(data);
-        setNeedsRoleSetup(false);
-        setProfileError(false);
-      }
-    } catch {
-      setUserProfile(null);
-      setProfileError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadProfile = useCallback(async (userId, { silent = false } = {}) => {
 
   useEffect(() => {
     // Bootstrap on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setUser(session.user);
-        loadProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+        setUser(normalizeUser(session.user));
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser(session.user);
-        loadProfile(session.user.id);
-      } else {
-        setUser(null);
-        setUserProfile(null);
-        setNeedsRoleSetup(false);
-        setProfileError(false);
-        setLoading(false);
-      }
-    });
+        setUser(normalizeUser(session.user));
 
     return () => subscription.unsubscribe();
   }, [loadProfile]);

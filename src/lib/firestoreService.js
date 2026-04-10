@@ -1,666 +1,367 @@
 /**
- * firestoreService.js — Phase 4 Hardened Data Service Layer
+ * firestoreService.js — Migrated from Firestore to base44 entities + Supabase.
+ * Firebase has been fully removed. All data is now stored in base44 entities.
  *
- * Security philosophy:
- * - All writes are ownership-scoped. No method accepts arbitrary uid overrides from callers.
- * - Role/status fields are stripped from all user-facing updates.
- * - Employer operations require verified org membership before proceeding.
- * - Candidate operations are always scoped to the authenticated uid.
- * - Admin-only operations live in adminService.js, not here.
- * - This layer is compatible with strict Firestore Security Rules enforcement.
+ * NOTE: uid parameters now receive the user's EMAIL (set via supabaseAuth normalization).
+ * This ensures backward compatibility with all calling pages.
  */
 
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  limit,
-  onSnapshot,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { base44 } from "@/api/base44Client";
 import { getCandidateCompletion } from "@/lib/profileCompletion";
 
-// ─── Internal helpers ────────────────────────────────────────────────────────
+const first = (arr) => (arr?.length > 0 ? arr[0] : null);
 
-/** Fields that must never be written by normal user-facing flows. */
-const PROTECTED_USER_FIELDS = ["role", "status", "is_admin", "admin_notes", "created_at", "uid"];
-
-/** Strip protected fields before any user self-update. */
+const PROTECTED_FIELDS = ["role", "status", "is_admin", "admin_notes", "created_at", "uid"];
 const stripProtectedFields = (data) => {
   const safe = { ...data };
-  PROTECTED_USER_FIELDS.forEach((f) => delete safe[f]);
+  PROTECTED_FIELDS.forEach((f) => delete safe[f]);
   return safe;
 };
 
-// ─── Users ───────────────────────────────────────────────────────────────────
+// ─── Users (now in Supabase profiles — use useAuth() instead) ───────────────
 
-/**
- * Read the current user's own document.
- * Compatible with Security Rule: allow read if request.auth.uid == uid
- */
-export const getCurrentUserDoc = (uid) =>
-  getDoc(doc(db, "users", uid)).then((s) => (s.exists() ? { uid: s.id, ...s.data() } : null));
-
-/**
- * Safe self-update — strips role, status, and all admin-controlled fields.
- * Only allows: full_name, preferred_language, avatar_url, phone.
- */
-export const updateSafeUserFields = (uid, data) => {
-  const ALLOWED = ["full_name", "preferred_language", "avatar_url", "phone"];
-  const safe = {};
-  ALLOWED.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
-  if (Object.keys(safe).length === 0) return Promise.resolve();
-  return updateDoc(doc(db, "users", uid), { ...safe, updated_at: serverTimestamp() });
-};
-
-/**
- * Internal-only: record last login. Called from firebaseAuth only.
- * Intentionally narrow — only touches last_login_at.
- */
-export const recordLastLogin = (uid) =>
-  updateDoc(doc(db, "users", uid), { last_login_at: serverTimestamp() }).catch(() => {
-    // Silently fail — doc may not exist yet on very first auth event
-  });
+export const getCurrentUserDoc = async () => null; // Use useAuth() userProfile
+export const updateSafeUserFields = async () => null; // Use supabase.auth.updateUser
+export const recordLastLogin = async () => {}; // No-op: Supabase handles sessions
 
 // ─── Candidate Profiles ──────────────────────────────────────────────────────
 
-/**
- * Read own candidate profile. uid must equal auth.uid.
- */
-export const getCandidateProfile = (uid) =>
-  getDoc(doc(db, "candidate_profiles", uid)).then((s) => (s.exists() ? { id: s.id, ...s.data() } : null));
+export const getCandidateProfile = async (uid) => {
+  if (!uid) return null;
+  const results = await base44.entities.CandidateProfile.filter({ user_email: uid });
+  return first(results);
+};
 
-/**
- * Save own candidate profile. Strips user_id override from caller — always uses uid param.
- * Never allows writing role/status.
- */
 export const saveCandidateProfile = async (uid, data) => {
   const safe = stripProtectedFields(data);
-  safe.user_id = uid;
-  // Merge with existing to get full picture for completion calc
   const existing = await getCandidateProfile(uid);
-  const merged = { ...existing, ...safe };
-  // Use the canonical weighted completion from profileCompletion.js
+  const merged = { ...(existing || {}), ...safe };
   safe.profile_completion = getCandidateCompletion(merged).score;
-  return setDoc(
-    doc(db, "candidate_profiles", uid),
-    { ...safe, updated_at: serverTimestamp() },
-    { merge: true }
-  );
+  safe.user_email = uid;
+  if (existing?.id) {
+    return base44.entities.CandidateProfile.update(existing.id, safe);
+  }
+  return base44.entities.CandidateProfile.create(safe);
 };
 
 // ─── Employer Profiles ───────────────────────────────────────────────────────
 
-/**
- * Read own employer profile. uid must equal auth.uid.
- */
-export const getEmployerProfile = (uid) =>
-  getDoc(doc(db, "employer_profiles", uid)).then((s) => (s.exists() ? { id: s.id, ...s.data() } : null));
+export const getEmployerProfile = async (uid) => {
+  if (!uid) return null;
+  const results = await base44.entities.EmployerProfile.filter({ user_email: uid });
+  return first(results);
+};
 
-/**
- * Save own employer profile. Strips org_id override — organization relationship is immutable
- * from the frontend; only safe contact fields are updated.
- */
-export const saveEmployerProfile = (uid, data) => {
-  const ALLOWED_EMPLOYER_FIELDS = ["title", "phone", "avatar_url"];
+export const saveEmployerProfile = async (uid, data) => {
+  const ALLOWED = ["title", "phone", "avatar_url"];
   const safe = {};
-  ALLOWED_EMPLOYER_FIELDS.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
-  return setDoc(
-    doc(db, "employer_profiles", uid),
-    { ...safe, updated_at: serverTimestamp() },
-    { merge: true }
-  );
+  ALLOWED.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
+  const existing = await getEmployerProfile(uid);
+  if (existing?.id) {
+    return base44.entities.EmployerProfile.update(existing.id, safe);
+  }
+  return base44.entities.EmployerProfile.create({ ...safe, user_email: uid });
 };
 
 // ─── Organizations ───────────────────────────────────────────────────────────
 
-/**
- * Read an organization by id (public-safe for published orgs; caller is responsible for
- * only reading orgs they have access to).
- */
-export const getOrganization = (orgId) =>
-  getDoc(doc(db, "organizations", orgId)).then((s) => (s.exists() ? { id: s.id, ...s.data() } : null));
+export const getOrganization = async (orgId) => {
+  if (!orgId) return null;
+  const results = await base44.entities.Organization.filter({ id: orgId });
+  return first(results);
+};
 
-/**
- * Read the organization for the current employer, resolved through their employer profile.
- * This ensures the employer can only ever read THEIR organization.
- */
 export const getOrganizationForCurrentEmployer = async (uid) => {
   const profile = await getEmployerProfile(uid);
   if (!profile?.organization_id) return null;
   return getOrganization(profile.organization_id);
 };
 
-/**
- * Save organization data — ONLY if the caller is the verified owner.
- * Ownership check: organizations/{orgId}.owner_user_id == uid
- * Strips sensitive fields: status, verified, owner_user_id are never updatable here.
- */
+export const getOwnedOrganization = async (uid) => {
+  if (!uid) return null;
+  const results = await base44.entities.Organization.filter({ owner_email: uid });
+  return first(results);
+};
+
 export const saveOrganizationIfOwner = async (uid, orgId, data) => {
   const org = await getOrganization(orgId);
   if (!org) throw new Error("Organization not found");
-  if (org.owner_user_id !== uid) throw new Error("FORBIDDEN: not the organization owner");
+  if (org.owner_email !== uid) throw new Error("FORBIDDEN: not the organization owner");
 
-  const ALLOWED_ORG_FIELDS = ["name", "business_type", "city", "address", "logo_url", "description", "website", "phone", "email"];
+  const ALLOWED = ["name", "business_type", "city", "address", "logo_url", "description", "website", "phone", "email"];
   const safe = {};
-  ALLOWED_ORG_FIELDS.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
+  ALLOWED.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
 
-  return setDoc(
-    doc(db, "organizations", orgId),
-    { ...safe, updated_at: serverTimestamp() },
-    { merge: true }
-  );
+  return base44.entities.Organization.update(orgId, safe);
 };
 
 // ─── Organization Membership ─────────────────────────────────────────────────
 
-/**
- * Get the current user's membership record for a specific organization.
- */
 export const getCurrentOrganizationMembership = async (uid, orgId) => {
-  const q = query(
-    collection(db, "organization_members"),
-    where("user_id", "==", uid),
-    where("organization_id", "==", orgId),
-    where("status", "==", "active"),
-    limit(1)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) return null;
-  return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  if (!uid) return null;
+  const results = await base44.entities.OrganizationMember.filter({
+    user_email: uid,
+    organization_id: orgId,
+    status: "active",
+  });
+  return first(results);
 };
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
 
-/**
- * Public: read only published jobs. Safe for any authenticated or public user.
- */
-export const getPublishedJobs = async () => {
-  const q = query(collection(db, "jobs"), where("status", "==", "published"), orderBy("created_at", "desc"));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-};
+export const getPublishedJobs = () =>
+  base44.entities.Job.filter({ status: "published" }, "-created_date");
 
-/**
- * Employer: read all jobs for their organization.
- * orgId is resolved through employer profile, not passed arbitrarily.
- */
 export const getEmployerOrganizationJobs = async (uid) => {
   const profile = await getEmployerProfile(uid);
   if (!profile?.organization_id) return [];
-  const q = query(
-    collection(db, "jobs"),
-    where("organization_id", "==", profile.organization_id),
-    orderBy("created_at", "desc")
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return base44.entities.Job.filter({ organization_id: profile.organization_id }, "-created_date");
 };
 
-/**
- * Read a single job (public read, enforced by Security Rules on Firestore side).
- */
-export const getJob = (jobId) =>
-  getDoc(doc(db, "jobs", jobId)).then((s) => (s.exists() ? { id: s.id, ...s.data() } : null));
+export const getJob = async (jobId) => {
+  if (!jobId) return null;
+  const results = await base44.entities.Job.filter({ id: jobId });
+  return first(results);
+};
 
-/**
- * Create a job — ALWAYS attaches the organization_id from the employer's own profile.
- * Caller cannot supply a different organization_id.
- * Status defaults to "draft" unless explicitly set to "published".
- */
+export const getJobsByOrg = async (orgId) => {
+  if (!orgId) return [];
+  return base44.entities.Job.filter({ organization_id: orgId }, "-created_date");
+};
+
 export const createJobForOwnedOrganization = async (uid, data, orgId, orgName) => {
   if (!orgId) throw new Error("No organization found for this employer");
 
-  const ALLOWED_JOB_FIELDS = [
-    "title", "description", "requirements", "benefits",
-    "job_type", "employment_type", "location",
-    "salary_min", "salary_max", "salary_period",
-    "experience_required", "status",
-  ];
+  const ALLOWED = ["title", "description", "requirements", "benefits", "job_type",
+    "employment_type", "location", "salary_min", "salary_max", "salary_period",
+    "experience_required", "status"];
   const safe = {};
-  ALLOWED_JOB_FIELDS.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
-
-  // Status gate: only allow draft or published, not arbitrary values
+  ALLOWED.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
   if (!["draft", "published"].includes(safe.status)) safe.status = "draft";
 
-  return addDoc(collection(db, "jobs"), {
+  return base44.entities.Job.create({
     ...safe,
-    organization_id: orgId,           // Always from verified employer profile
+    organization_id: orgId,
     organization_name: orgName || "",
-    created_by: uid,                   // Always the real auth uid
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp(),
+    posted_by: uid,
   });
 };
 
-/**
- * Update a job — verifies the job belongs to the employer's organization before writing.
- * Strips organization_id, created_by to prevent re-assignment.
- */
 export const updateJobForOwnedOrganization = async (uid, jobId, data) => {
   const profile = await getEmployerProfile(uid);
   if (!profile?.organization_id) throw new Error("No organization for this employer");
 
   const job = await getJob(jobId);
   if (!job) throw new Error("Job not found");
-  if (job.organization_id !== profile.organization_id) throw new Error("FORBIDDEN: job belongs to another organization");
+  if (job.organization_id !== profile.organization_id) throw new Error("FORBIDDEN");
 
-  const ALLOWED_UPDATE_FIELDS = [
-    "title", "description", "requirements", "benefits",
-    "job_type", "employment_type", "location",
-    "salary_min", "salary_max", "salary_period",
-    "experience_required", "status",
-  ];
+  const ALLOWED = ["title", "description", "requirements", "benefits", "job_type",
+    "employment_type", "location", "salary_min", "salary_max", "salary_period",
+    "experience_required", "status"];
   const safe = {};
-  ALLOWED_UPDATE_FIELDS.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
+  ALLOWED.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
 
-  // Status gate
-  if (safe.status && !["draft", "published", "closed", "filled"].includes(safe.status)) {
-    delete safe.status;
-  }
-
-  return updateDoc(doc(db, "jobs", jobId), { ...safe, updated_at: serverTimestamp() });
+  return base44.entities.Job.update(jobId, safe);
 };
+
+export const updateJob = (jobId, data) => base44.entities.Job.update(jobId, data);
+export const deleteJob = (jobId) => base44.entities.Job.delete(jobId);
+
+export const getRelatedJobs = async (jobId, jobType) => {
+  const results = await base44.entities.Job.filter({ status: "published", job_type: jobType }, "-created_date");
+  return results.filter((j) => j.id !== jobId).slice(0, 4);
+};
+
+export const getRecentlyPostedJobs = (count = 5) =>
+  base44.entities.Job.filter({ status: "published" }, "-created_date", count);
 
 // ─── Applications ─────────────────────────────────────────────────────────────
 
-/**
- * Candidate: read only their own applications.
- */
 export const getCurrentCandidateApplications = async (uid) => {
-  const q = query(
-    collection(db, "applications"),
-    where("candidate_user_id", "==", uid),
-    orderBy("applied_at", "desc")
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (!uid) return [];
+  return base44.entities.Application.filter({ candidate_email: uid }, "-created_date");
 };
 
-// Backward-compatible alias
 export const getApplicationsByCandidate = getCurrentCandidateApplications;
 
-/**
- * Employer: read applications only for their own organization.
- * Organization membership is verified through employer profile.
- */
 export const getApplicationsForCurrentEmployerOrganization = async (uid) => {
   const profile = await getEmployerProfile(uid);
   if (!profile?.organization_id) return [];
-  const q = query(
-    collection(db, "applications"),
-    where("organization_id", "==", profile.organization_id),
-    orderBy("applied_at", "desc")
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return base44.entities.Application.filter({ organization_id: profile.organization_id }, "-created_date");
 };
 
-// Backward-compatible alias (for pages still using orgId)
 export const getApplicationsByOrg = async (orgId) => {
   if (!orgId) return [];
-  const q = query(
-    collection(db, "applications"),
-    where("organization_id", "==", orgId),
-    orderBy("applied_at", "desc")
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return base44.entities.Application.filter({ organization_id: orgId }, "-created_date");
 };
 
-/**
- * Check for duplicate application before creating.
- */
-export const checkExistingApplication = async (jobId, candidateUid) => {
-  const q = query(
-    collection(db, "applications"),
-    where("job_id", "==", jobId),
-    where("candidate_user_id", "==", candidateUid)
-  );
-  const snap = await getDocs(q);
-  return !snap.empty;
+export const checkExistingApplication = async (jobId, uid) => {
+  const results = await base44.entities.Application.filter({ job_id: jobId, candidate_email: uid });
+  return results.length > 0;
 };
 
-/**
- * Create application — enforces:
- * - candidate_user_id always equals the authenticated uid (not caller-supplied)
- * - duplicate check before insert
- * - status always starts as "submitted"
- * - strips any sensitive fields
- */
 export const createApplicationForCurrentCandidate = async (uid, jobId, data) => {
   const alreadyApplied = await checkExistingApplication(jobId, uid);
   if (alreadyApplied) throw new Error("DUPLICATE: already applied to this job");
 
-  const ALLOWED_APP_FIELDS = ["job_title", "organization_id", "organization_name", "cover_letter", "resume_url", "candidate_name"];
+  const ALLOWED = ["job_title", "organization_id", "organization_name", "cover_letter", "resume_url", "candidate_name"];
   const safe = {};
-  ALLOWED_APP_FIELDS.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
+  ALLOWED.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
 
-  const appRef = await addDoc(collection(db, 'applications'), {
+  const app = await base44.entities.Application.create({
     ...safe,
     job_id: jobId,
-    candidate_user_id: uid,
-    status: 'submitted',
-    applied_at: serverTimestamp(),
+    candidate_email: uid,
+    status: "pending",
   });
 
-  // Notify org owner about new application
   try {
     if (safe.organization_id) {
-      const orgSnap = await getDoc(doc(db, 'organizations', safe.organization_id));
-      if (orgSnap.exists() && orgSnap.data().owner_user_id) {
-        await createNotification(orgSnap.data().owner_user_id, {
-          title: 'New Application Received',
-          message: `${safe.candidate_name || 'A candidate'} applied for "${safe.job_title || 'your job'}"`,
-          type: 'application',
-          link: '/employer/applications',
+      const orgs = await base44.entities.Organization.filter({ id: safe.organization_id });
+      const org = orgs[0];
+      if (org?.owner_email) {
+        await base44.entities.Notification.create({
+          user_email: org.owner_email,
+          title: "New Application Received",
+          message: `${safe.candidate_name || "A candidate"} applied for "${safe.job_title || "your job"}"`,
+          type: "application",
+          link: "/employer/applications",
+          read: false,
         });
       }
     }
-  } catch (_) { /* non-blocking */ }
+  } catch (_) {}
 
-  return appRef;
+  return app;
 };
 
-// Backward-compatible alias
 export const createApplication = (data) =>
-  addDoc(collection(db, "applications"), { ...data, applied_at: serverTimestamp(), status: "submitted" });
+  base44.entities.Application.create({ ...data, status: "pending" });
 
-/**
- * Employer updates application status — validates the application belongs to their org.
- * Only allows status transitions, no other field mutations.
- */
 export const updateApplicationStatus = async (uid, applicationId, newStatus) => {
-  const VALID_STATUSES = ["submitted", "reviewing", "shortlisted", "interview", "offered", "rejected", "withdrawn", "hired"];
-  if (!VALID_STATUSES.includes(newStatus)) throw new Error("Invalid status value");
+  const VALID = ["pending", "reviewing", "shortlisted", "interview", "offered", "rejected", "withdrawn", "hired"];
+  if (!VALID.includes(newStatus)) throw new Error("Invalid status value");
 
   const profile = await getEmployerProfile(uid);
   if (!profile?.organization_id) throw new Error("No organization for this employer");
 
-  const appSnap = await getDoc(doc(db, "applications", applicationId));
-  if (!appSnap.exists()) throw new Error("Application not found");
-  if (appSnap.data().organization_id !== profile.organization_id) throw new Error("FORBIDDEN: application belongs to another organization");
+  const apps = await base44.entities.Application.filter({ id: applicationId });
+  const app = apps[0];
+  if (!app) throw new Error("Application not found");
+  if (app.organization_id !== profile.organization_id) throw new Error("FORBIDDEN");
 
-  await updateDoc(doc(db, 'applications', applicationId), {
-    status: newStatus,
-    updated_at: serverTimestamp(),
-  });
+  await base44.entities.Application.update(applicationId, { status: newStatus });
 
-  // Notify the candidate about status change
   const statusMessages = {
-    reviewing: 'Your application is under review',
-    shortlisted: 'Great news! You have been shortlisted',
-    interview: 'Interview scheduled — check your application for details',
-    offered: '🎉 You have received a job offer!',
-    rejected: 'Your application was not selected at this time',
-    withdrawn: 'Your application has been withdrawn',
-    hired: '🎊 Congratulations! You have been hired',
+    reviewing: "Your application is under review",
+    shortlisted: "Great news! You have been shortlisted",
+    interview: "Interview scheduled — check your application for details",
+    offered: "🎉 You have received a job offer!",
+    rejected: "Your application was not selected at this time",
+    hired: "🎊 Congratulations! You have been hired",
   };
   try {
-    const candidateUid = appSnap.data().candidate_user_id;
-    if (candidateUid && statusMessages[newStatus]) {
-      await createNotification(candidateUid, {
+    if (app.candidate_email && statusMessages[newStatus]) {
+      await base44.entities.Notification.create({
+        user_email: app.candidate_email,
         title: statusMessages[newStatus],
-        message: `Application for "${appSnap.data().job_title || 'a job'}" — status updated to: ${newStatus}`,
-        type: 'application',
-        link: '/candidate/applications',
+        message: `Application for "${app.job_title || "a job"}" — status: ${newStatus}`,
+        type: "application",
+        link: "/candidate/applications",
+        read: false,
       });
     }
-  } catch (_) { /* non-blocking */ }
+  } catch (_) {}
 };
 
-// Backward-compatible alias (used by EmployerApplications)
 export const updateApplication = (appId, data) =>
-  updateDoc(doc(db, "applications", appId), { ...data, updated_at: serverTimestamp() });
+  base44.entities.Application.update(appId, data);
+
+export const getApplicationById = async (applicationId) => {
+  if (!applicationId) return null;
+  const results = await base44.entities.Application.filter({ id: applicationId });
+  return results[0] || null;
+};
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
-/**
- * Read own notifications only.
- */
 export const getNotifications = async (uid) => {
-  const q = query(
-    collection(db, "notifications"),
-    where("user_id", "==", uid),
-    orderBy("created_at", "desc"),
-    limit(50)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (!uid) return [];
+  return base44.entities.Notification.filter({ user_email: uid }, "-created_date", 50);
 };
 
-/**
- * Mark a notification as read — safe self-mutation, only touches is_read.
- */
 export const markNotificationRead = (notifId) =>
-  updateDoc(doc(db, "notifications", notifId), { is_read: true, updated_at: serverTimestamp() });
+  base44.entities.Notification.update(notifId, { read: true });
 
 export const markAllNotificationsRead = async (uid) => {
-  const q = query(collection(db, 'notifications'), where('user_id', '==', uid), where('is_read', '==', false));
-  const snap = await getDocs(q);
-  await Promise.all(snap.docs.map((d) => updateDoc(d.ref, { is_read: true, updated_at: serverTimestamp() })));
+  const notifs = await base44.entities.Notification.filter({ user_email: uid, read: false });
+  await Promise.all(notifs.map((n) => base44.entities.Notification.update(n.id, { read: true })));
 };
 
 export const getUnreadNotificationsCount = async (uid) => {
-  const q = query(collection(db, 'notifications'), where('user_id', '==', uid), where('is_read', '==', false));
-  const snap = await getDocs(q);
-  return snap.size;
+  const notifs = await base44.entities.Notification.filter({ user_email: uid, read: false });
+  return notifs.length;
 };
-
-/** Internal: create a notification for a user. */
-const createNotification = (userId, { title, message, type = 'system', link = '' }) =>
-  addDoc(collection(db, 'notifications'), {
-    user_id: userId,
-    title,
-    message,
-    type,
-    link,
-    is_read: false,
-    created_at: serverTimestamp(),
-  });
 
 // ─── Profile Completion ─────────────────────────────────────────────────────
 
-/**
- * Calculate employer/organization profile completion.
- */
 export const calculateEmployerProfileCompletion = (org) => {
   if (!org) return 0;
-  const checks = [
-    !!org.name,
-    !!org.business_type,
-    !!org.city,
-    !!org.address,
-    !!org.logo_url,
-    !!org.description,
-    !!org.website,
-    !!org.phone,
-  ];
-  const filled = checks.filter(Boolean).length;
-  return Math.round((filled / checks.length) * 100);
+  const checks = [!!org.name, !!org.business_type, !!org.city, !!org.address, !!org.logo_url, !!org.description, !!org.website, !!org.phone];
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 };
-
-/**
- * Get organization owned by a specific user (queries by owner_user_id).
- * Handles cases where org may have been created with a non-uid document ID.
- */
-export const getOwnedOrganization = async (uid) => {
-  const q = query(
-    collection(db, 'organizations'),
-    where('owner_user_id', '==', uid),
-    limit(1)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) return null;
-  return { id: snap.docs[0].id, ...snap.docs[0].data() };
-};
-
-// ─── Job Notification ──────────────────────────────────────────────────────────────
-
-/**
- * Notify all candidates whose preferred_roles match the job_type of a newly published job.
- * Runs non-blocking — errors are silently caught.
- */
-export const notifyMatchingCandidatesForJob = async (job) => {
-  if (!job?.job_type) return;
-  const q = query(
-    collection(db, 'candidate_profiles'),
-    where('preferred_roles', 'array-contains', job.job_type)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) return;
-  const notifications = snap.docs.map((d) =>
-    createNotification(d.data().user_id, {
-      title: `وظيفة جديدة تناسبك: ${job.title}`,
-      message: `نشرت ${job.organization_name || 'شركة'} وظيفة جديدة في تخصصك. اطلع عليها الآن!`,
-      type: 'job',
-      link: `/jobs/${job.id}`,
-    })
-  );
-  await Promise.allSettled(notifications);
-};
-
-// ─── Backward-compatible job helpers ───────────────────────────────────────
-
-export const getJobsByOrg = async (orgId) => {
-  if (!orgId) return [];
-  const q = query(collection(db, 'jobs'), where('organization_id', '==', orgId), orderBy('created_at', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-};
-
-export const updateJob = (jobId, data) =>
-  updateDoc(doc(db, 'jobs', jobId), { ...data, updated_at: serverTimestamp() });
-
-export const deleteJob = (jobId) => deleteDoc(doc(db, 'jobs', jobId));
-
-/**
- * Get related jobs by same job_type or same location (excluding current job).
- */
-export const getRelatedJobs = async (jobId, jobType, location) => {
-  const q = query(
-    collection(db, 'jobs'),
-    where('status', '==', 'published'),
-    where('job_type', '==', jobType),
-    orderBy('created_at', 'desc'),
-    limit(4)
-  );
-  const snap = await getDocs(q);
-  return snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((j) => j.id !== jobId);
-};
-
-/** Get recently posted published jobs. */
-export const getRecentlyPostedJobs = async (count = 5) => {
-  const q = query(
-    collection(db, 'jobs'),
-    where('status', '==', 'published'),
-    orderBy('created_at', 'desc'),
-    limit(count)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-};
-
-// ─── Application by ID ────────────────────────────────────────────────────────
-
-export const getApplicationById = (applicationId) =>
-  getDoc(doc(db, 'applications', applicationId)).then((s) => s.exists() ? { id: s.id, ...s.data() } : null);
 
 // ─── Application Messaging ────────────────────────────────────────────────────
 
-/**
- * Real-time subscription to messages for an application.
- * Returns an unsubscribe function.
- * Only the candidate on the application and the employer org members should be
- * able to read/write — enforce via Firestore Security Rules:
- *   match /application_messages/{msgId} {
- *     allow read, write: if request.auth != null;
- *   }
- */
 export const subscribeToApplicationMessages = (applicationId, callback) => {
-  const q = query(
-    collection(db, 'application_messages'),
-    where('application_id', '==', applicationId),
-    orderBy('created_at', 'asc')
-  );
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  base44.entities.ApplicationMessage.filter({ application_id: applicationId }, "created_date")
+    .then(callback);
+
+  return base44.entities.ApplicationMessage.subscribe((event) => {
+    if (event.data?.application_id === applicationId) {
+      base44.entities.ApplicationMessage.filter({ application_id: applicationId }, "created_date")
+        .then(callback);
+    }
   });
 };
 
-/**
- * Send a message on an application thread.
- * Sender identity is always attached server-side via the authenticated uid.
- */
 export const sendApplicationMessage = (applicationId, { sender_uid, sender_name, sender_role, message }) =>
-  addDoc(collection(db, 'application_messages'), {
+  base44.entities.ApplicationMessage.create({
     application_id: applicationId,
-    sender_uid,
-    sender_name: sender_name || '',
-    sender_role: sender_role || '',
+    sender_email: sender_uid, // sender_uid is now email
+    sender_name: sender_name || "",
+    sender_role: sender_role || "",
     message,
-    created_at: serverTimestamp(),
   });
 
-// ─── Application Internal Notes (Employer-only) ────────────────────────────────
+// ─── Application Internal Notes ──────────────────────────────────────────────
 
-export const getApplicationInternalNotes = async (applicationId) => {
-  const q = query(
-    collection(db, 'application_notes'),
-    where('application_id', '==', applicationId),
-    orderBy('created_at', 'desc')
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-};
+export const getApplicationInternalNotes = async (applicationId) =>
+  base44.entities.ApplicationNote.filter({ application_id: applicationId }, "-created_date");
 
 export const createApplicationInternalNote = (applicationId, organizationId, { author_email, author_name, body }) =>
-  addDoc(collection(db, 'application_notes'), {
+  base44.entities.ApplicationNote.create({
     application_id: applicationId,
     organization_id: organizationId,
     author_email,
     author_name,
     body,
-    visibility: 'internal',
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp(),
+    visibility: "internal",
   });
 
 export const updateApplicationInternalNote = (noteId, { body }) =>
-  updateDoc(doc(db, 'application_notes', noteId), {
-    body,
-    updated_at: serverTimestamp(),
-  });
+  base44.entities.ApplicationNote.update(noteId, { body });
 
-// ─── Application Evaluation (Employer-only structured review) ────────────────
+// ─── Application Evaluation ──────────────────────────────────────────────────
 
-export const getApplicationEvaluation = async (applicationId) => {
-  const q = query(
-    collection(db, 'application_evaluations'),
-    where('application_id', '==', applicationId)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-};
+export const getApplicationEvaluation = async (applicationId) =>
+  base44.entities.ApplicationEvaluation.filter({ application_id: applicationId });
 
 export const saveApplicationEvaluation = async (applicationId, organizationId, { reviewer_email, reviewer_name, overall_score, strengths, concerns, tags, recommendation }) => {
-  const q = query(
-    collection(db, 'application_evaluations'),
-    where('application_id', '==', applicationId),
-    where('reviewer_email', '==', reviewer_email)
-  );
-  const snap = await getDocs(q);
+  const existing = await base44.entities.ApplicationEvaluation.filter({
+    application_id: applicationId,
+    reviewer_email,
+  });
 
   const payload = {
     overall_score,
@@ -668,53 +369,55 @@ export const saveApplicationEvaluation = async (applicationId, organizationId, {
     concerns: concerns || [],
     tags: tags || [],
     recommendation,
-    updated_at: serverTimestamp(),
   };
 
-  if (snap.docs.length > 0) {
-    return updateDoc(snap.docs[0].ref, payload);
-  } else {
-    return addDoc(collection(db, 'application_evaluations'), {
-      application_id: applicationId,
-      organization_id: organizationId,
-      reviewer_email,
-      reviewer_name,
-      ...payload,
-      created_at: serverTimestamp(),
-    });
+  if (existing.length > 0) {
+    return base44.entities.ApplicationEvaluation.update(existing[0].id, payload);
   }
+  return base44.entities.ApplicationEvaluation.create({
+    application_id: applicationId,
+    organization_id: organizationId,
+    reviewer_email,
+    reviewer_name,
+    ...payload,
+  });
 };
 
-// ─── Hiring Review Summary (Dashboard) ──────────────────────────────────────
+// ─── Hiring Review Summary ───────────────────────────────────────────────────
 
 export const getEmployerHiringReviewSummary = async (uid) => {
   const profile = await getEmployerProfile(uid);
   if (!profile?.organization_id) return { reviewingCount: 0, shortlistedCount: 0, strongEvaluationCount: 0 };
 
-  const appsQ = query(
-    collection(db, 'applications'),
-    where('organization_id', '==', profile.organization_id)
-  );
-  const appSnap = await getDocs(appsQ);
-  const applications = appSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-  let reviewingCount = 0;
-  let shortlistedCount = 0;
-  let strongEvaluationCount = 0;
+  const applications = await base44.entities.Application.filter({ organization_id: profile.organization_id });
+  let reviewingCount = 0, shortlistedCount = 0, strongEvaluationCount = 0;
 
   for (const app of applications) {
-    if (app.status === 'reviewing') reviewingCount++;
-    if (app.status === 'shortlisted') shortlistedCount++;
-
+    if (app.status === "reviewing") reviewingCount++;
+    if (app.status === "shortlisted") shortlistedCount++;
     const evals = await getApplicationEvaluation(app.id);
-    if (evals.some(e => e.recommendation === 'strong_yes')) {
-      strongEvaluationCount++;
-    }
+    if (evals.some((e) => e.recommendation === "strong_yes")) strongEvaluationCount++;
   }
 
-  return {
-    reviewingCount,
-    shortlistedCount,
-    strongEvaluationCount,
-  };
+  return { reviewingCount, shortlistedCount, strongEvaluationCount };
+};
+
+export const notifyMatchingCandidatesForJob = async (job) => {
+  if (!job?.job_type) return;
+  try {
+    const candidates = await base44.entities.CandidateProfile.list();
+    const matching = candidates.filter((c) => c.job_types?.includes(job.job_type));
+    await Promise.allSettled(
+      matching.map((c) =>
+        base44.entities.Notification.create({
+          user_email: c.user_email,
+          title: `وظيفة جديدة تناسبك: ${job.title}`,
+          message: `نشرت ${job.organization_name || "شركة"} وظيفة جديدة في تخصصك.`,
+          type: "job",
+          link: `/jobs/${job.id}`,
+          read: false,
+        })
+      )
+    );
+  } catch (_) {}
 };

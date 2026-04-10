@@ -58,16 +58,14 @@ export default function BrowseJobs() {
   });
 
   const { data: candidateProfile } = useQuery({
-    queryKey: ["my-candidate-profile", firebaseUser?.uid],
-    queryFn: () => getCandidateProfile(firebaseUser.uid),
+    queryKey: ["my-candidate-profile", firebaseUser?.email],
+    queryFn: () => getCandidateProfile(firebaseUser.email),
     enabled: !!firebaseUser && isCandidate,
   });
 
   const { data: myApplications = [] } = useQuery({
-    queryKey: ["my-applications", firebaseUser?.uid],
-    queryFn: () => getCurrentCandidateApplications(firebaseUser.uid),
-    enabled: !!firebaseUser && isCandidate,
-  });
+    queryKey: ["my-applications", firebaseUser?.email],
+    queryFn: () => getCurrentCandidateApplications(firebaseUser.email),
 
   const appliedJobIds = useMemo(() => new Set(myApplications.map((a) => a.job_id)), [myApplications]);
 
@@ -86,20 +84,21 @@ export default function BrowseJobs() {
     if (filters.location) list = list.filter((j) => j.location?.toLowerCase().includes(filters.location.toLowerCase()));
 
     list.sort((a, b) => {
-      if (filters.sort === "oldest") return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+      const dateA = new Date(a.created_date || 0).getTime();
+      const dateB = new Date(b.created_date || 0).getTime();
+      if (filters.sort === "oldest") return dateA - dateB;
       if (filters.sort === "salary_high") return (b.salary_max || b.salary_min || 0) - (a.salary_max || a.salary_min || 0);
       if (filters.sort === "salary_low") return (a.salary_min || 0) - (b.salary_min || 0);
       if (filters.sort === "recommended" && candidateProfile) {
         const score = (j) => {
           let s = 0;
-          if (candidateProfile.preferred_roles?.includes(j.job_type)) s += 3;
-          if (candidateProfile.city && j.location?.toLowerCase().includes(candidateProfile.city.toLowerCase())) s += 2;
-          s += Math.max(0, 1 - ((Date.now() / 1000 - (j.created_at?.seconds || 0)) / (86400 * 30)));
+          if (candidateProfile.job_types?.includes(j.job_type)) s += 3;
+          if (candidateProfile.location && j.location?.toLowerCase().includes(candidateProfile.location.toLowerCase())) s += 2;
           return s;
         };
         return score(b) - score(a);
       }
-      return (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0); // newest
+      return dateB - dateA; // newest
     });
     return list;
   }, [jobs, filters]);

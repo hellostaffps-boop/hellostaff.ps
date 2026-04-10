@@ -1,0 +1,29 @@
+{
+  "name": "ApplicationMessage",
+  "type": "object",
+  "properties": {
+    "application_id": {
+      "type": "string",
+      "description": "Reference to the application"
+    },
+    "sender_email": {
+      "type": "string",
+      "description": "Email of the sender"
+    },
+    "sender_name": {
+      "type": "string"
+    },
+    "sender_role": {
+      "type": "string",
+      "description": "candidate or employer_owner"
+    },
+    "message": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "application_id",
+    "sender_email",
+    "message"
+  ]
+}

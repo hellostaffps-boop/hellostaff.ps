@@ -1,129 +1,108 @@
 /**
- * interviewService.js — Interview Scheduling & Evaluation
- *
- * One interview document per application (doc ID = application ID).
- * Security:
- * - Schedule/update: employer who owns the application's org
- * - Read: employer org members + the candidate on the application
- * - Candidate gets a notification when interview is scheduled/updated
+ * interviewService.js — Migrated from Firestore to base44 entities (Interview entity).
+ * uid parameters now receive email (see supabaseAuth normalization).
  */
 
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  onSnapshot,
-  serverTimestamp,
-  collection,
-  query,
-  where,
-  getDocs,
-  addDoc,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { base44 } from "@/api/base44Client";
 import { getEmployerProfile } from "@/lib/firestoreService";
 
-// ─── Read ─────────────────────────────────────────────────────────────────────
+const first = (arr) => (arr?.length > 0 ? arr[0] : null);
 
 export const getInterview = async (applicationId) => {
-  const snap = await getDoc(doc(db, "interviews", applicationId));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  const results = await base44.entities.Interview.filter({ application_id: applicationId });
+  return first(results);
 };
 
-export const subscribeToInterview = (applicationId, callback) =>
-  onSnapshot(doc(db, "interviews", applicationId), (snap) =>
-    callback(snap.exists() ? { id: snap.id, ...snap.data() } : null)
-  );
+export const subscribeToInterview = (applicationId, callback) => {
+  // Load initial interview
+  getInterview(applicationId).then(callback);
+  // Subscribe to changes
+  return base44.entities.Interview.subscribe((event) => {
+    if (event.data?.application_id === applicationId) {
+      callback(event.data);
+    }
+  });
+};
 
-// Fetch interviews for a list of application IDs (batch read)
 export const getInterviewsForApplications = async (applicationIds) => {
-  if (!applicationIds.length) return {};
+  if (!applicationIds?.length) return {};
   const map = {};
   await Promise.all(
     applicationIds.map(async (appId) => {
-      const snap = await getDoc(doc(db, "interviews", appId));
-      if (snap.exists()) map[appId] = { id: snap.id, ...snap.data() };
+      const interview = await getInterview(appId);
+      if (interview) map[appId] = interview;
     })
   );
   return map;
 };
 
-// ─── Schedule ─────────────────────────────────────────────────────────────────
-
-/**
- * Employer schedules or reschedules an interview.
- * Validates the application belongs to the employer's organization.
- */
 export const scheduleInterview = async (employerUid, applicationId, { scheduled_at, location, type, notes }) => {
   const profile = await getEmployerProfile(employerUid);
   if (!profile?.organization_id) throw new Error("No organization for this employer");
 
-  const appSnap = await getDoc(doc(db, "applications", applicationId));
-  if (!appSnap.exists()) throw new Error("Application not found");
-  const app = appSnap.data();
+  const apps = await base44.entities.Application.filter({ id: applicationId });
+  const app = apps[0];
+  if (!app) throw new Error("Application not found");
   if (app.organization_id !== profile.organization_id)
     throw new Error("FORBIDDEN: application belongs to another organization");
 
-  const isReschedule = (await getDoc(doc(db, "interviews", applicationId))).exists();
+  const existing = await getInterview(applicationId);
 
-  await setDoc(doc(db, "interviews", applicationId), {
+  const payload = {
     application_id: applicationId,
     job_title: app.job_title || "",
-    candidate_user_id: app.candidate_user_id || "",
+    candidate_email: app.candidate_email || "",
     candidate_name: app.candidate_name || app.candidate_email || "",
     organization_id: profile.organization_id,
-    scheduled_at, // ISO string from datetime-local input
+    scheduled_at,
     location: location || "",
-    type: type || "in_person", // "in_person" | "online" | "phone"
+    type: type || "in_person",
     notes: notes || "",
     status: "scheduled",
-    evaluation_notes: "",
-    rating: null,
-    created_at: isReschedule ? undefined : serverTimestamp(),
-    updated_at: serverTimestamp(),
-  }, { merge: true });
+  };
+
+  if (existing?.id) {
+    await base44.entities.Interview.update(existing.id, payload);
+  } else {
+    await base44.entities.Interview.create(payload);
+  }
 
   // Notify candidate
   try {
-    if (app.candidate_user_id) {
-      const msg = isReschedule
-        ? `تم تحديث موعد مقابلتك لوظيفة "${app.job_title || "الوظيفة"}" — تحقق من التفاصيل.`
-        : `تهانينا! تمت جدولة مقابلة لوظيفة "${app.job_title || "الوظيفة"}". تحقق من التفاصيل.`;
-      await addDoc(collection(db, "notifications"), {
-        user_id: app.candidate_user_id,
+    if (app.candidate_email) {
+      const isReschedule = !!existing;
+      await base44.entities.Notification.create({
+        user_email: app.candidate_email,
         title: isReschedule ? "تحديث موعد المقابلة" : "🎉 تمت جدولة مقابلتك",
-        message: msg,
+        message: isReschedule
+          ? `تم تحديث موعد مقابلتك لوظيفة "${app.job_title || "الوظيفة"}"`
+          : `تهانينا! تمت جدولة مقابلة لوظيفة "${app.job_title || "الوظيفة"}"`,
         type: "application",
         link: "/candidate/applications",
-        is_read: false,
-        created_at: serverTimestamp(),
+        read: false,
       });
     }
-  } catch (_) { /* non-blocking */ }
+  } catch (_) {}
 };
 
-// ─── Evaluation Notes ─────────────────────────────────────────────────────────
-
-/**
- * Employer saves post-interview evaluation notes & rating.
- */
 export const saveInterviewEvaluation = async (employerUid, applicationId, { evaluation_notes, strengths, weaknesses, recommendation, rating }) => {
   const profile = await getEmployerProfile(employerUid);
   if (!profile?.organization_id) throw new Error("No organization for this employer");
 
-  const appSnap = await getDoc(doc(db, "applications", applicationId));
-  if (!appSnap.exists()) throw new Error("Application not found");
-  if (appSnap.data().organization_id !== profile.organization_id)
-    throw new Error("FORBIDDEN");
+  const apps = await base44.entities.Application.filter({ id: applicationId });
+  const app = apps[0];
+  if (!app) throw new Error("Application not found");
+  if (app.organization_id !== profile.organization_id) throw new Error("FORBIDDEN");
 
-  await updateDoc(doc(db, "interviews", applicationId), {
+  const existing = await getInterview(applicationId);
+  if (!existing?.id) throw new Error("Interview not found");
+
+  return base44.entities.Interview.update(existing.id, {
     evaluation_notes: evaluation_notes || "",
     strengths: strengths || "",
     weaknesses: weaknesses || "",
     recommendation: recommendation || "",
     rating: rating ?? null,
     status: "completed",
-    updated_at: serverTimestamp(),
   });
 };

@@ -1,0 +1,68 @@
+{
+  "name": "Interview",
+  "type": "object",
+  "properties": {
+    "application_id": {
+      "type": "string",
+      "description": "Reference to the application"
+    },
+    "job_title": {
+      "type": "string"
+    },
+    "candidate_email": {
+      "type": "string"
+    },
+    "candidate_name": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "scheduled_at": {
+      "type": "string",
+      "description": "ISO datetime string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "in_person",
+        "online",
+        "phone"
+      ],
+      "default": "in_person"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "completed",
+        "cancelled"
+      ],
+      "default": "scheduled"
+    },
+    "evaluation_notes": {
+      "type": "string"
+    },
+    "strengths": {
+      "type": "string"
+    },
+    "weaknesses": {
+      "type": "string"
+    },
+    "recommendation": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "application_id"
+  ]
+}

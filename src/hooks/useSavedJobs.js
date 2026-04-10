@@ -5,11 +5,11 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 import { getSavedJobIds, toggleSaveJob } from "@/lib/savedJobsService";
 
 export function useSavedJobs() {
-  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const { user: firebaseUser, userProfile } = useAuth();
   const isCandidate = userProfile?.role === "candidate";
   const [savedJobIds, setSavedJobIds] = useState(new Set());
   const [loading, setLoading] = useState(false);
