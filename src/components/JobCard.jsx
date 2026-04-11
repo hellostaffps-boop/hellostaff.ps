@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MapPin, Clock, DollarSign, Bookmark, CheckCircle2 } from "lucide-react";
+import { MapPin, Clock, Bookmark, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -61,7 +61,7 @@ export default function JobCard({ job, showSave, onSave, saved, applied }) {
             )}
             {job.salary_min && (
               <span className="flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">₪</span>
                 {job.salary_min}{job.salary_max ? `–${job.salary_max}` : ""} / {job.salary_period || t("jobCard", "month")}
               </span>
             )}

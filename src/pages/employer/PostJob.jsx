@@ -39,6 +39,11 @@ export default function PostJob() {
     enabled: !!orgId,
   });
 
+  const palestinianCities = [
+    "رام الله", "نابلس", "الخليل", "جنين", "طولكرم", "قلقيلية",
+    "أريحا", "بيت لحم", "طوباس", "سلفيت", "القدس"
+  ];
+
   const categories = [
     { value: "barista", label: t("jobCard", "typeBarista") },
     { value: "chef", label: t("jobCard", "typeChef") },
@@ -116,7 +121,14 @@ export default function PostJob() {
           </div>
           <div>
             <Label className="text-sm">{t("contact", "officeLabel")}</Label>
-            <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="mt-1.5" />
+            <Select value={form.location} onValueChange={(v) => setForm({ ...form, location: v })}>
+              <SelectTrigger className="mt-1.5"><SelectValue placeholder="اختر المدينة" /></SelectTrigger>
+              <SelectContent>
+                {palestinianCities.map((city) => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
