@@ -5,6 +5,7 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import AppSidebar from "./AppSidebar";
 import AppTopbar from "./AppTopbar";
+import MobileBottomNav from "./MobileBottomNav";
 import { useLanguage } from "@/hooks/useLanguage";
 import {
   LayoutDashboard,
@@ -58,9 +59,10 @@ export default function EmployerLayout() {
           notificationsPath="/employer/notifications"
           unreadCount={unreadCount}
         />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">
           <Outlet />
         </main>
+        <MobileBottomNav links={links} />
       </div>
     </div>
   );
