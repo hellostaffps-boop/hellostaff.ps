@@ -1,5 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
 import { Briefcase, FileText, Users, Eye, UserPlus, Building2, CheckCircle2 } from "lucide-react";
+
+const JOB_STATUS = {
+  published: { color: "bg-green-50 text-green-700 border-green-200",  dot: "bg-green-500",  label: "Published" },
+  draft:     { color: "bg-gray-50 text-gray-500 border-gray-200",    dot: "bg-gray-400",   label: "Draft" },
+  closed:    { color: "bg-red-50 text-red-700 border-red-200",       dot: "bg-red-400",    label: "Closed" },
+  filled:    { color: "bg-blue-50 text-blue-700 border-blue-200",    dot: "bg-blue-400",   label: "Filled" },
+};
+
+const APP_STATUS = {
+  pending:     { color: "bg-yellow-50 text-yellow-700 border-yellow-200",  dot: "bg-yellow-400" },
+  reviewing:   { color: "bg-blue-50 text-blue-700 border-blue-200",     dot: "bg-blue-400" },
+  shortlisted: { color: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-400" },
+  interview:   { color: "bg-indigo-50 text-indigo-700 border-indigo-200", dot: "bg-indigo-400" },
+  offered:     { color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-400" },
+  rejected:    { color: "bg-red-50 text-red-700 border-red-200",        dot: "bg-red-400" },
+  withdrawn:   { color: "bg-gray-50 text-gray-500 border-gray-200",     dot: "bg-gray-400" },
+};
+
+function StatusDot({ cfg, label }) {
+  const c = cfg || { color: "bg-secondary text-muted-foreground border-border", dot: "bg-gray-300" };
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0 ${c.color}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+      {label}
+    </span>
+  );
+}
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import StatsCard from "../../components/StatsCard";
@@ -144,11 +171,12 @@ export default function Dashboard() {
                 <Link key={job.id} to={`/employer/jobs`} className="block bg-white rounded-xl border border-border p-4 hover:border-accent/30 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{job.title}</div>
+                     <div className="font-medium text-sm truncate">{job.title}</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        {job.applications_count || 0} {t("dashboard", "applicationCount")} · {t("status", job.status)}
-                      </div>
+                       {job.applications_count || 0} {t("dashboard", "applicationCount")}
+                     </div>
                     </div>
+                    <StatusDot cfg={JOB_STATUS[job.status]} label={JOB_STATUS[job.status]?.label || job.status} />
                   </div>
                 </Link>
               ))}
@@ -173,10 +201,9 @@ export default function Dashboard() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{app.candidate_name || app.candidate_email}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {app.job_title} · {t("status", app.status)}
-                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 truncate">{app.job_title}</div>
                     </div>
+                    <StatusDot cfg={APP_STATUS[app.status]} label={t("status", app.status) || app.status} />
                   </div>
                 </Link>
               ))}
