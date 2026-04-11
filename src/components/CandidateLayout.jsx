@@ -14,6 +14,7 @@ import {
   FileText,
   Bell,
   Settings,
+  FilePen,
 } from "lucide-react";
 
 export default function CandidateLayout() {
@@ -39,6 +40,7 @@ export default function CandidateLayout() {
     { label: t("dashboard", "savedJobs"), path: "/candidate/saved", icon: Bookmark },
     { label: t("dashboard", "applications"), path: "/candidate/applications", icon: FileText },
     { label: t("dashboard", "notifications"), path: "/candidate/notifications", icon: Bell },
+    { label: "CV Builder", path: "/candidate/cv-builder", icon: FilePen },
     { label: t("dashboard", "settings"), path: "/candidate/settings", icon: Settings },
   ];
 

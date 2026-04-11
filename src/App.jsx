@@ -32,6 +32,7 @@ import SavedJobs from './pages/candidate/SavedJobs';
 import Applications from './pages/candidate/Applications';
 import CandidateNotifications from './pages/candidate/Notifications';
 import CandidateSettings from './pages/candidate/Settings';
+import CVBuilder from './pages/candidate/CVBuilder';
 import EmployerDashboard from './pages/employer/Dashboard';
 import PostJob from './pages/employer/PostJob';
 import ManageJobs from './pages/employer/ManageJobs';
@@ -79,6 +80,7 @@ const AuthenticatedApp = () => {
           <Route path="applications" element={<Applications />} />
           <Route path="notifications" element={<CandidateNotifications />} />
           <Route path="settings" element={<CandidateSettings />} />
+          <Route path="cv-builder" element={<CVBuilder />} />
         </Route>
       </Route>
 
