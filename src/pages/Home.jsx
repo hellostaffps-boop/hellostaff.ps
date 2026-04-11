@@ -1,4 +1,5 @@
 import HeroSection from "../components/landing/HeroSection";
+import TopCompaniesCarousel from "../components/landing/TopCompaniesCarousel";
 import HowItWorks from "../components/landing/HowItWorks";
 import JobCategories from "../components/landing/JobCategories";
 import FeaturesSection from "../components/landing/FeaturesSection";
@@ -13,6 +14,7 @@ export default function Home() {
       <HeroSection />
       <HowItWorks />
       <JobCategories />
+      <TopCompaniesCarousel />
       <FeaturesSection />
       <WhySection />
       <Testimonials />
