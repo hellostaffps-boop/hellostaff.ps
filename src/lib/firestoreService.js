@@ -88,7 +88,7 @@ export const saveOrganizationIfOwner = async (uid, orgId, data) => {
   if (!org) throw new Error("Organization not found");
   if (org.owner_email !== uid) throw new Error("FORBIDDEN: not the organization owner");
 
-  const ALLOWED = ["name", "business_type", "city", "address", "logo_url", "description", "website", "phone", "email"];
+  const ALLOWED = ["name", "business_type", "industry", "city", "address", "logo_url", "cover_image_url", "description", "website", "phone", "email", "video_url", "culture_values", "perks", "team_photos", "founded_year", "instagram_url", "linkedin_url"];
   const safe = {};
   ALLOWED.forEach((k) => { if (data[k] !== undefined) safe[k] = data[k]; });
 

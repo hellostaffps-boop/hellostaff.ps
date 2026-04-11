@@ -17,8 +17,8 @@ export default function Dashboard() {
   const { firebaseUser, userProfile } = useFirebaseAuth();
 
   const { data: employerProfile } = useQuery({
-    queryKey: ["employer-profile", firebaseUser?.uid],
-    queryFn: () => getEmployerProfile(firebaseUser.uid),
+    queryKey: ["employer-profile", firebaseUser?.email],
+    queryFn: () => getEmployerProfile(firebaseUser.email),
     enabled: !!firebaseUser,
   });
 
@@ -33,8 +33,8 @@ export default function Dashboard() {
   const orgCompletion = getOrgCompletion(org);
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["employer-jobs", firebaseUser?.uid],
-    queryFn: () => getEmployerOrganizationJobs(firebaseUser.uid),
+    queryKey: ["employer-jobs", firebaseUser?.email],
+    queryFn: () => getEmployerOrganizationJobs(firebaseUser.email),
     enabled: !!firebaseUser,
   });
 
@@ -51,21 +51,21 @@ export default function Dashboard() {
   });
 
   const { data: reviewSummary = { reviewingCount: 0, shortlistedCount: 0 } } = useQuery({
-    queryKey: ["hiring-review-summary", firebaseUser?.uid],
-    queryFn: () => getEmployerHiringReviewSummary(firebaseUser.uid),
+    queryKey: ["hiring-review-summary", firebaseUser?.email],
+    queryFn: () => getEmployerHiringReviewSummary(firebaseUser.email),
     enabled: !!firebaseUser,
   });
 
   const now = Date.now();
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
   const newApps = applications.filter((a) => {
-    const ts = a.applied_at?.toDate ? a.applied_at.toDate().getTime() : 0;
+    const ts = new Date(a.created_date || 0).getTime();
     return ts > sevenDaysAgo;
   }).length;
   const shortlisted = applications.filter((a) => a.status === "shortlisted").length;
 
   const draftJobs = jobs.filter((j) => j.status === "draft").length;
-  const pendingApps = applications.filter((a) => a.status === "submitted").length;
+  const pendingApps = applications.filter((a) => a.status === "pending").length;
 
   const { lang: language } = useLanguage();
 

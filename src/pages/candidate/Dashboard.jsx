@@ -27,8 +27,8 @@ export default function Dashboard() {
   const { firebaseUser } = useFirebaseAuth();
 
   const { data: applications = [] } = useQuery({
-    queryKey: ["my-applications", firebaseUser?.uid],
-    queryFn: () => getApplicationsByCandidate(firebaseUser.uid),
+    queryKey: ["my-applications", firebaseUser?.email],
+    queryFn: () => getApplicationsByCandidate(firebaseUser.email),
     enabled: !!firebaseUser,
   });
 
@@ -38,14 +38,14 @@ export default function Dashboard() {
   });
 
   const { data: candidateProfile } = useQuery({
-    queryKey: ["my-candidate-profile", firebaseUser?.uid],
-    queryFn: () => getCandidateProfile(firebaseUser.uid),
+    queryKey: ["my-candidate-profile", firebaseUser?.email],
+    queryFn: () => getCandidateProfile(firebaseUser.email),
     enabled: !!firebaseUser,
   });
 
   const { data: savedJobDocs = [] } = useQuery({
-    queryKey: ["saved-jobs", firebaseUser?.uid],
-    queryFn: () => getSavedJobs(firebaseUser.uid),
+    queryKey: ["saved-jobs", firebaseUser?.email],
+    queryFn: () => getSavedJobs(firebaseUser.email),
     enabled: !!firebaseUser,
   });
 
