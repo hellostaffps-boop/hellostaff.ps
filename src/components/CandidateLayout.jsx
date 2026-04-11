@@ -39,7 +39,7 @@ export default function CandidateLayout() {
     { label: t("dashboard", "browseJobs"), path: "/candidate/jobs", icon: Search },
     { label: t("dashboard", "savedJobs"), path: "/candidate/saved", icon: Bookmark },
     { label: t("dashboard", "applications"), path: "/candidate/applications", icon: FileText },
-    { label: t("dashboard", "notifications"), path: "/candidate/notifications", icon: Bell },
+    { label: t("dashboard", "notifications"), path: "/candidate/notifications", icon: Bell, badge: unreadCount },
     { label: "CV Builder", path: "/candidate/cv-builder", icon: FilePen },
     { label: t("dashboard", "settings"), path: "/candidate/settings", icon: Settings },
   ];

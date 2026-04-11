@@ -47,7 +47,12 @@ export default function AppSidebar({ links, title, open, onClose }) {
                   }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  {link.label}
+                  <span className="flex-1">{link.label}</span>
+                  {link.badge > 0 && (
+                    <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                      {link.badge > 99 ? "99+" : link.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}

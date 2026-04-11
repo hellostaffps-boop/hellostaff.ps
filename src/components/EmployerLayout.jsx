@@ -40,7 +40,7 @@ export default function EmployerLayout() {
     { label: t("dashboard", "manageJobs"), path: "/employer/jobs", icon: Briefcase },
     { label: t("dashboard", "applications"), path: "/employer/applications", icon: FileText },
     { label: t("dashboard", "team"), path: "/employer/team", icon: Users },
-    { label: t("dashboard", "notifications"), path: "/employer/notifications", icon: Bell },
+    { label: t("dashboard", "notifications"), path: "/employer/notifications", icon: Bell, badge: unreadCount },
     { label: t("dashboard", "settings"), path: "/employer/settings", icon: Settings },
   ];
 
