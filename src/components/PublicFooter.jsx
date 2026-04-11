@@ -43,8 +43,8 @@ export default function PublicFooter() {
             <ul className="space-y-2.5">
               <li><Link to="/about" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "about")}</Link></li>
               <li><Link to="/contact" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "contact")}</Link></li>
-              <li><span className="text-sm text-primary-foreground/60">{t("footer", "privacy")}</span></li>
-              <li><span className="text-sm text-primary-foreground/60">{t("footer", "terms")}</span></li>
+              <li><Link to="/privacy" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "privacy")}</Link></li>
+              <li><Link to="/terms" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">{t("footer", "terms")}</Link></li>
             </ul>
           </div>
         </div>
