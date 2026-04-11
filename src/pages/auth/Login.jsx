@@ -58,15 +58,26 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-primary flex-col justify-between p-12">
-        <Link to="/" className="flex items-center gap-2">
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden">
+        {/* Palestinian landscape background */}
+        <img
+          src="https://images.unsplash.com/photo-1544967919-c4dfd82caf79?w=1200&q=80"
+          alt="Palestine"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-primary/70" />
+
+        {/* Content */}
+        <Link to="/" className="relative flex items-center gap-2 z-10">
           <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
             <span className="text-primary font-bold text-sm">H</span>
           </div>
           <span className="text-white font-semibold text-lg tracking-tight">Hello Staff</span>
         </Link>
-        <div>
-          <blockquote className="text-white/80 text-lg leading-relaxed italic mb-6">
+
+        <div className="relative z-10">
+          <blockquote className="text-white/90 text-lg leading-relaxed italic mb-6">
             "{t("auth", "testimonialQuote")}"
           </blockquote>
           <div className="flex items-center gap-3">
@@ -75,11 +86,12 @@ export default function Login() {
             </div>
             <div>
               <div className="text-white text-sm font-semibold">{t("auth", "testimonialName")}</div>
-              <div className="text-white/60 text-xs">{t("auth", "testimonialRole")}</div>
+              <div className="text-white/70 text-xs">{t("auth", "testimonialRole")}</div>
             </div>
           </div>
         </div>
-        <div className="text-white/40 text-xs">© 2026 Hello Staff</div>
+
+        <div className="relative z-10 text-white/50 text-xs">© 2026 Hello Staff</div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12">
