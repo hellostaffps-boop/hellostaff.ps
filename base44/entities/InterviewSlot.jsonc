@@ -1,0 +1,116 @@
+{
+  "name": "InterviewSlot",
+  "type": "object",
+  "properties": {
+    "application_id": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "candidate_email": {
+      "type": "string"
+    },
+    "candidate_name": {
+      "type": "string"
+    },
+    "employer_email": {
+      "type": "string"
+    },
+    "job_title": {
+      "type": "string"
+    },
+    "organization_name": {
+      "type": "string"
+    },
+    "proposed_slots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of ISO datetime strings proposed by employer"
+    },
+    "selected_slot": {
+      "type": "string",
+      "description": "ISO datetime chosen by candidate"
+    },
+    "location": {
+      "type": "string"
+    },
+    "interview_type": {
+      "type": "string",
+      "enum": [
+        "in_person",
+        "online",
+        "phone"
+      ],
+      "default": "in_person"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_selection",
+        "confirmed",
+        "cancelled"
+      ],
+      "default": "pending_selection"
+    }
+  },
+  "required": [
+    "application_id",
+    "candidate_email",
+    "proposed_slots"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "employer_owner"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.candidate_email": "{{user.email}}"
+        },
+        {
+          "data.employer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "platform_admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.candidate_email": "{{user.email}}"
+        },
+        {
+          "data.employer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "platform_admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.employer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "platform_admin"
+          }
+        }
+      ]
+    }
+  }
+}

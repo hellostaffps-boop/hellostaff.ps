@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { FileText } from "lucide-react";
 import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { getInterviewsForApplications } from "@/lib/interviewService";
+import { getInterviewSlotsForApplications } from "@/lib/interviewSlotService";
 import { Badge } from "@/components/ui/badge";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
@@ -64,6 +65,12 @@ export default function Applications() {
     enabled: applications.length > 0,
   });
 
+  const { data: interviewSlots = {}, refetch: refetchSlots } = useQuery({
+    queryKey: ["my-interview-slots", applications.map((a) => a.id).join(",")],
+    queryFn: () => getInterviewSlotsForApplications(applications.map((a) => a.id)),
+    enabled: applications.length > 0,
+  });
+
   const appsList = realTimeApps.length > 0 ? realTimeApps : applications;
 
   const filtered = useMemo(() =>
@@ -108,6 +115,8 @@ export default function Applications() {
                 key={app.id}
                 app={app}
                 interview={interviews[app.id]}
+                interviewSlot={interviewSlots[app.id]}
+                onSlotSelected={refetchSlots}
               />
             ))}
           </div>
