@@ -33,6 +33,7 @@ import Applications from './pages/candidate/Applications';
 import CandidateNotifications from './pages/candidate/Notifications';
 import CandidateSettings from './pages/candidate/Settings';
 import CVBuilder from './pages/candidate/CVBuilder';
+import EmployerOnboarding from './pages/employer/EmployerOnboarding';
 import EmployerDashboard from './pages/employer/Dashboard';
 import PostJob from './pages/employer/PostJob';
 import ManageJobs from './pages/employer/ManageJobs';
@@ -86,6 +87,7 @@ const AuthenticatedApp = () => {
 
       {/* Employer routes */}
       <Route element={<ProtectedRoute allowedRoles={["employer_owner", "employer_manager"]} />}>
+        <Route path="/employer/onboarding" element={<EmployerOnboarding />} />
         <Route path="/employer" element={<EmployerLayout />}>
           <Route index element={<EmployerDashboard />} />
           <Route path="company" element={<CompanyProfile />} />

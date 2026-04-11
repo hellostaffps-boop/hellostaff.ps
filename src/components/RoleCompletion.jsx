@@ -25,7 +25,7 @@ export default function RoleCompletion() {
     setError("");
     try {
       await completeRoleSetup(role);
-      navigate(role === "candidate" ? "/candidate" : "/employer", { replace: true });
+      navigate(role === "candidate" ? "/candidate" : "/employer/onboarding", { replace: true });
     } catch (e) {
       setError(e.message);
       setLoading(false);
