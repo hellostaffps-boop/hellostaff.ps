@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import {
   Globe, Phone, Mail, Instagram, Linkedin, MapPin, Calendar,
   ShieldCheck, Briefcase, ArrowLeft, Users, ChevronRight
@@ -41,6 +42,15 @@ export default function CompanyPublicPage() {
     queryFn: () => base44.entities.Job.filter({ organization_id: id, status: "published" }, "-created_date"),
     enabled: !!id,
   });
+
+  usePageMeta(org ? {
+    title: `${org.name} — ${INDUSTRY_LABELS[org.industry] || "Company"} Jobs`,
+    description: org.description
+      ? org.description.slice(0, 155)
+      : `${jobs.length} open position${jobs.length !== 1 ? "s" : ""} at ${org.name}. Browse and apply today.`,
+    image: org.logo_url || org.cover_image_url,
+    url: window.location.href,
+  } : {});
 
   if (isLoading) {
     return (

@@ -120,18 +120,7 @@
         }
       ]
     },
-    "read": {
-      "$or": [
-        {
-          "data.owner_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "platform_admin"
-          }
-        }
-      ]
-    },
+    "read": null,
     "update": {
       "$or": [
         {
