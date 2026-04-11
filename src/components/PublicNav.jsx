@@ -4,11 +4,18 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/hooks/useLanguage";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useAuth } from "@/lib/supabaseAuth";
 
 export default function PublicNav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { t } = useLanguage();
+  const { userProfile } = useAuth();
+  const role = userProfile?.role;
+  const isEmployer = role === "employer_owner" || role === "employer_manager";
+  const isCandidate = role === "candidate";
+  const isLoggedIn = !!role;
+  const dashboardPath = isEmployer ? "/employer" : isCandidate ? "/candidate" : "/";
 
   const links = [
     { label: t("nav", "browseJobs"), path: "/jobs" },
@@ -47,14 +54,24 @@ export default function PublicNav() {
 
           <div className="hidden md:flex items-center gap-3">
             <LanguageSwitcher />
-            <Link to="/auth/login">
-              <Button variant="ghost" size="sm">{t("nav", "signIn")}</Button>
-            </Link>
-            <Link to="/auth/signup">
-              <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                {t("nav", "postJob")}
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link to={dashboardPath}>
+                <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  {t("nav", "dashboard") || "لوحة التحكم"}
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/auth/login">
+                  <Button variant="ghost" size="sm">{t("nav", "signIn")}</Button>
+                </Link>
+                <Link to="/auth/signup">
+                  <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    {t("nav", "postJob")}
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -81,14 +98,24 @@ export default function PublicNav() {
             ))}
             <div className="pt-3 border-t border-border flex flex-col gap-2">
               <div className="flex justify-center pb-1"><LanguageSwitcher /></div>
-              <Link to="/auth/login" onClick={() => setOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full">{t("nav", "signIn")}</Button>
-              </Link>
-              <Link to="/auth/signup" onClick={() => setOpen(false)}>
-                <Button size="sm" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                  {t("nav", "postJob")}
-                </Button>
-              </Link>
+              {isLoggedIn ? (
+                <Link to={dashboardPath} onClick={() => setOpen(false)}>
+                  <Button size="sm" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                    {t("nav", "dashboard") || "لوحة التحكم"}
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/auth/login" onClick={() => setOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full">{t("nav", "signIn")}</Button>
+                  </Link>
+                  <Link to="/auth/signup" onClick={() => setOpen(false)}>
+                    <Button size="sm" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                      {t("nav", "postJob")}
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

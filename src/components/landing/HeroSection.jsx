@@ -2,9 +2,14 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/lib/supabaseAuth";
 
 export default function HeroSection() {
   const { t } = useLanguage();
+  const { userProfile } = useAuth();
+  const role = userProfile?.role;
+  const isEmployer = role === "employer_owner" || role === "employer_manager";
+  const isCandidate = role === "candidate";
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-secondary/50 via-background to-accent/5" />
@@ -28,21 +33,21 @@ export default function HeroSection() {
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/jobs">
-              <Button size="lg" className="h-12 px-8 text-base gap-2">
-              {t("hero", "findJob")}
-              <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Link to="/employer/dashboard">
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 px-8 text-base border-2"
-              >
-                {t("hero", "postJob")}
-              </Button>
-            </Link>
+            {!isEmployer && (
+              <Link to={isCandidate ? "/candidate" : "/jobs"}>
+                <Button size="lg" className="h-12 px-8 text-base gap-2">
+                  {isCandidate ? t("nav", "dashboard") || "لوحة التحكم" : t("hero", "findJob")}
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            )}
+            {!isCandidate && (
+              <Link to={isEmployer ? "/employer" : "/auth/signup"}>
+                <Button size="lg" variant="outline" className="h-12 px-8 text-base border-2">
+                  {isEmployer ? (t("nav", "dashboard") || "لوحة التحكم") : t("hero", "postJob")}
+                </Button>
+              </Link>
+            )}
           </div>
 
           <div className="mt-16 flex items-center justify-center gap-8 text-sm text-muted-foreground">
