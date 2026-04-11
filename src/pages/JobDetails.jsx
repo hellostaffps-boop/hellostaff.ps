@@ -1,4 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -247,6 +248,12 @@ export default function JobDetails() {
 
   const isCandidate = userProfile?.role === "candidate";
   const isSaved = savedJobIds?.has(id);
+
+  usePageMeta(job ? {
+    title: `${job.title} at ${job.organization_name}`,
+    description: job.description ? job.description.slice(0, 155) : `Apply for ${job.title} at ${job.organization_name}. ${job.location || ""}`,
+    url: window.location.href,
+  } : {});
 
   const onApplicationSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ["already-applied", id] });

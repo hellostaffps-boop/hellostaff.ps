@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,12 @@ const INITIAL_FILTERS = { search: "", category: "all", employment: "all", locati
 export default function BrowseJobs() {
   const { t } = useLanguage();
   const { user: firebaseUser, userProfile } = useAuth();
+
+  usePageMeta({
+    title: "Browse Hospitality Jobs",
+    description: "Find barista, chef, waiter, cashier and more hospitality jobs near you. Apply in minutes.",
+    url: window.location.href,
+  });
   const isCandidate = userProfile?.role === "candidate";
   const { savedJobIds, toggleSave } = useSavedJobs();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
