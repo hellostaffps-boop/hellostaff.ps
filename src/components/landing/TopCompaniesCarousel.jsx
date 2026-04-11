@@ -22,7 +22,7 @@ export default function TopCompaniesCarousel() {
   const [current, setCurrent] = useState(0);
   const timerRef = useRef(null);
 
-  const { data: orgs = [] } = useQuery({
+  const { data: orgs = [], isLoading } = useQuery({
     queryKey: ["top-companies"],
     queryFn: async () => {
       const all = await base44.entities.Organization.filter({ status: "active", verified: true });
@@ -64,7 +64,44 @@ export default function TopCompaniesCarousel() {
     timerRef.current = setInterval(next, 4000);
   };
 
-  if (total === 0) return null;
+  if (isLoading) return (
+    <section className="py-16 bg-secondary/30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-10">
+          <div className="h-8 bg-secondary rounded w-64 mx-auto mb-3" />
+          <div className="h-4 bg-secondary rounded w-48 mx-auto" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-card border border-border rounded-2xl p-6 flex flex-col gap-4 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-secondary" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-secondary rounded w-3/4" />
+                  <div className="h-3 bg-secondary rounded w-1/2" />
+                </div>
+              </div>
+              <div className="h-3 bg-secondary rounded w-full" />
+              <div className="h-3 bg-secondary rounded w-2/3" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  if (total === 0) return (
+    <section className="py-16 bg-secondary/30" dir={isAr ? "rtl" : "ltr"}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">
+          {isAr ? "أبرز المنشآت على المنصة" : "Top Companies on Hello Staff"}
+        </h2>
+        <p className="text-muted-foreground">
+          {isAr ? "ستظهر أفضل المنشآت هنا قريباً" : "Top companies will appear here soon"}
+        </p>
+      </div>
+    </section>
+  );
 
   // Show 3 cards on desktop, 1 on mobile
   const getVisible = () => {
