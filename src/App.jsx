@@ -5,6 +5,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { LanguageProvider } from '@/hooks/useLanguage';
 import { SupabaseAuthProvider } from '@/lib/supabaseAuth';
+import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import RoleCompletion from '@/components/RoleCompletion';
 import Login from './pages/auth/Login';
@@ -17,6 +19,7 @@ import AdminLayout from './components/AdminLayout';
 import Home from './pages/Home';
 import BrowseJobs from './pages/BrowseJobs';
 import JobDetails from './pages/JobDetails';
+import CompanyPublicPage from './pages/CompanyPublicPage';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -58,6 +61,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Home />} />
         <Route path="/jobs" element={<BrowseJobs />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
+        <Route path="/company/:id" element={<CompanyPublicPage />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -92,12 +96,12 @@ const AuthenticatedApp = () => {
         </Route>
       </Route>
 
-      {/* Shared application chat — accessible by candidate and employer */}
+      {/* Shared application chat */}
       <Route element={<ProtectedRoute allowedRoles={["candidate", "employer_owner", "employer_manager"]} />}>
         <Route path="/application/:id/chat" element={<ApplicationChat />} />
       </Route>
 
-      {/* Admin routes — secure hidden access */}
+      {/* Admin routes */}
       <Route path="/admin" element={<AdminPage />} />
       <Route element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -114,16 +118,18 @@ const AuthenticatedApp = () => {
 
 function App() {
   return (
-    <LanguageProvider>
-      <SupabaseAuthProvider>
-        <QueryClientProvider client={queryClientInstance}>
-          <Router>
-            <AuthenticatedApp />
-          </Router>
-          <Toaster />
-        </QueryClientProvider>
-      </SupabaseAuthProvider>
-    </LanguageProvider>
+    <AuthProvider>
+      <LanguageProvider>
+        <SupabaseAuthProvider>
+          <QueryClientProvider client={queryClientInstance}>
+            <Router>
+              <AuthenticatedApp />
+            </Router>
+            <Toaster />
+          </QueryClientProvider>
+        </SupabaseAuthProvider>
+      </LanguageProvider>
+    </AuthProvider>
   );
 }
 
