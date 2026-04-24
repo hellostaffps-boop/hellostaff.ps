@@ -20,17 +20,16 @@ export default function ProtectedRoute({ allowedRoles = [], redirectTo = "/auth/
     return <Navigate to={redirectTo} replace />;
   }
 
-  if (needsRoleSetup) {
+  // platform_admin bypasses role setup requirement
+  if (needsRoleSetup && userProfile?.role !== "platform_admin") {
     return <Navigate to="/auth/complete-profile" replace />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(userProfile?.role)) {
-    // Show bilingual access-denied state rather than silently redirecting
-    // This prevents confusion and makes authorization boundaries explicit
     const role = userProfile?.role;
     if (role === "candidate") return <Navigate to="/candidate" replace />;
     if (role === "employer_owner" || role === "employer_manager") return <Navigate to="/employer" replace />;
-    if (role === "platform_admin") return <Navigate to="/admin" replace />;
+    if (role === "platform_admin") return <Navigate to="/admin/dashboard" replace />;
     return <AccessDenied />;
   }
 

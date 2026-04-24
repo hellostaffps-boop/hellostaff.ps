@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Upload, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Plus, X, Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getCandidateProfile, saveCandidateProfile } from "@/lib/firestoreService";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getCandidateProfile, saveCandidateProfile } from "@/lib/supabaseService";
+import { uploadFile } from "@/lib/storageService";
+
 
 const emptyExp = () => ({ title: "", company: "", from: "", to: "", current: false, description: "" });
 const emptyEdu = () => ({ degree: "", institution: "", year: "" });
@@ -23,8 +24,9 @@ export default function EditProfile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t, lang } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const fileInputRef = useRef(null);
+
 
   const [saving, setSaving] = useState(false);
   const [uploadingCV, setUploadingCV] = useState(false);
@@ -41,10 +43,11 @@ export default function EditProfile() {
   });
 
   const { data: existing } = useQuery({
-    queryKey: ["my-candidate-profile", firebaseUser?.uid],
-    queryFn: () => getCandidateProfile(firebaseUser.uid),
-    enabled: !!firebaseUser,
+    queryKey: ["my-candidate-profile", user?.email],
+    queryFn: () => getCandidateProfile(user.email),
+    enabled: !!user,
   });
+
 
   useEffect(() => {
     if (existing) {
@@ -112,117 +115,36 @@ export default function EditProfile() {
   });
   const removeEdu = (i) => setForm((p) => ({ ...p, education: p.education.filter((_, idx) => idx !== i) }));
 
-  // CV Upload + AI extraction
+  // CV Upload
   const handleCVUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingCV(true);
-    setExtracted(false);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await uploadFile(file, "resumes");
       setForm((p) => ({ ...p, cv_url: file_url }));
-      toast.success(t("editProfile", "cvUploaded") || "CV uploaded");
-
-      // AI extraction only for PDF files
-      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-        setUploadingCV(false);
-        setExtracting(true);
-        try {
-          const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `You are an expert HR data extractor. Analyze this CV/resume and extract structured information.
-Return ONLY a JSON object — no markdown, no explanation.
-
-Extract:
-- full_name (string)
-- headline (string, short professional title)
-- bio (string, 2-3 sentence summary)
-- skills (array of strings)
-- years_experience (number, total years)
-- work_experience (array of {title, company, from (YYYY-MM), to (YYYY-MM or empty if current), current (bool), description})
-- education (array of {degree, institution, year})
-- phone (string)
-- city (string)`,
-            file_urls: [file_url],
-            response_json_schema: {
-              type: "object",
-              properties: {
-                full_name: { type: "string" },
-                headline: { type: "string" },
-                bio: { type: "string" },
-                skills: { type: "array", items: { type: "string" } },
-                years_experience: { type: "number" },
-                work_experience: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      title: { type: "string" },
-                      company: { type: "string" },
-                      from: { type: "string" },
-                      to: { type: "string" },
-                      current: { type: "boolean" },
-                      description: { type: "string" },
-                    },
-                  },
-                },
-                education: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      degree: { type: "string" },
-                      institution: { type: "string" },
-                      year: { type: "string" },
-                    },
-                  },
-                },
-                phone: { type: "string" },
-                city: { type: "string" },
-              },
-            },
-          });
-
-          setForm((prev) => ({
-            ...prev,
-            headline: result.headline || prev.headline,
-            bio: result.bio || prev.bio,
-            phone: result.phone || prev.phone,
-            city: result.city || prev.city,
-            skills: result.skills?.length ? result.skills : prev.skills,
-            years_experience: result.years_experience != null ? String(result.years_experience) : prev.years_experience,
-            work_experience: result.work_experience?.length ? result.work_experience : prev.work_experience,
-            education: result.education?.length ? result.education : prev.education,
-          }));
-
-          setExtracted(true);
-          toast.success("✨ " + (lang === "ar" ? "تم استخراج البيانات من السيرة الذاتية تلقائياً" : "Profile auto-filled from your CV"));
-        } catch {
-          toast.error(lang === "ar" ? "تعذّر تحليل الملف بالذكاء الاصطناعي" : "AI extraction failed");
-        } finally {
-          setExtracting(false);
-        }
-      } else {
-        setUploadingCV(false);
-      }
+      toast.success(t("editProfile", "cvUploaded") || "CV uploaded successfully");
     } catch {
       toast.error(t("editProfile", "cvUploadError") || "Upload failed");
+    } finally {
       setUploadingCV(false);
     }
   };
+
 
   const handleSave = async () => {
     setSaving(true);
     const data = {
       ...form,
-      user_id: firebaseUser.uid,
       years_experience: form.years_experience ? Number(form.years_experience) : 0,
     };
-    await saveCandidateProfile(firebaseUser.uid, data);
+    await saveCandidateProfile(user.email, data);
     queryClient.invalidateQueries({ queryKey: ["my-candidate-profile"] });
     toast.success(t("editProfile", "saveSuccess"));
     setSaving(false);
     navigate("/candidate/profile");
   };
+
 
   const sectionClass = "bg-white rounded-2xl border border-border p-6 space-y-4";
 
@@ -266,32 +188,25 @@ Extract:
         <div className={sectionClass}>
           <h3 className="font-semibold text-sm">{t("editProfile", "cvSection") || "CV / Resume"}</h3>
           <div className="flex items-center gap-3 flex-wrap">
-            <Button type="button" variant="outline" size="sm" className="gap-2" disabled={uploadingCV || extracting}
+            <Button type="button" variant="outline" size="sm" className="gap-2" disabled={uploadingCV}
               onClick={() => fileInputRef.current?.click()}>
-              {(uploadingCV || extracting) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              {uploadingCV ? (lang === "ar" ? "جارٍ الرفع..." : "Uploading...") : extracting ? (lang === "ar" ? "جارٍ التحليل..." : "Analysing...") : (t("editProfile", "uploadCV") || "Upload CV")}
+              {uploadingCV ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {uploadingCV ? (lang === "ar" ? "جارٍ الرفع..." : "Uploading...") : (t("editProfile", "uploadCV") || "Upload CV")}
             </Button>
             {form.cv_url && (
-              <a href={form.cv_url} target="_blank" rel="noreferrer"
-                className="text-sm text-accent hover:underline truncate max-w-xs">
-                {t("editProfile", "viewCV") || "View CV"}
-              </a>
+              <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {lang === "ar" ? "تم رفع السيرة الذاتية بنجاح" : "CV uploaded successfully"}
+                <span className="mx-1 text-muted-foreground">•</span>
+                <a href={form.cv_url} target="_blank" rel="noreferrer"
+                  className="font-medium hover:underline truncate max-w-[100px]">
+                  {t("editProfile", "viewCV") || "View"}
+                </a>
+              </div>
             )}
             <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleCVUpload} />
           </div>
-          {extracting && (
-            <div className="flex items-center gap-2 text-xs text-purple-600 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2">
-              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              {lang === "ar" ? "الذكاء الاصطناعي يحلل السيرة الذاتية ويملأ بياناتك تلقائياً..." : "AI is extracting your skills, experience and info from the CV..."}
-            </div>
-          )}
-          {extracted && !extracting && (
-            <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {lang === "ar" ? "تم ملء البيانات تلقائياً من السيرة الذاتية — راجعها وعدّلها إن لزم." : "Profile filled from CV — review and adjust if needed."}
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">{lang === "ar" ? "PDF, DOC, DOCX — سيتم استخراج البيانات تلقائياً من ملفات PDF" : "PDF, DOC, DOCX — AI auto-fills your profile from PDF files"}</p>
+          <p className="text-xs text-muted-foreground">{lang === "ar" ? "الصيغ المدعومة: PDF, DOC, DOCX (حجم أقصى 20 ميجابايت)" : "Supported formats: PDF, DOC, DOCX (Max 20MB)"}</p>
         </div>
 
         {/* Skills */}

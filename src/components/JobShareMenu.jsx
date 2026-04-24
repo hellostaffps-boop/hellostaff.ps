@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Share2, Link2, Mail, Check } from "lucide-react";
 import { toast } from "sonner";
-import { useLanguage } from "@/hooks/useLanguage";
 
 // Simple WhatsApp & LinkedIn SVG icons
 const WhatsAppIcon = () => (

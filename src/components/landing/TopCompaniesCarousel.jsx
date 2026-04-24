@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, MapPin, Briefcase } from "lucide-react";
+
 
 const INDUSTRY_LABELS = {
   cafe: "☕ كافيه",
@@ -25,12 +26,10 @@ export default function TopCompaniesCarousel() {
   const { data: orgs = [], isLoading } = useQuery({
     queryKey: ["top-companies"],
     queryFn: async () => {
-      const all = await base44.entities.Organization.filter({ status: "active", verified: true });
-      // fallback: if no verified ones, get any active
-      if (all.length === 0) {
-        return await base44.entities.Organization.filter({ status: "active" });
-      }
-      return all.slice(0, 12);
+      const { data: verified } = await supabase.from("organizations").select("*").eq("status", "active").eq("verified", true).limit(12);
+      if (verified?.length > 0) return verified;
+      const { data: active } = await supabase.from("organizations").select("*").eq("status", "active").limit(12);
+      return active || [];
     },
   });
 
@@ -38,12 +37,13 @@ export default function TopCompaniesCarousel() {
     queryKey: ["org-job-counts", orgs.map(o => o.id).join(",")],
     enabled: orgs.length > 0,
     queryFn: async () => {
-      const jobs = await base44.entities.Job.filter({ status: "published" });
+      const { data: jobs } = await supabase.from("jobs").select("organization_id").eq("status", "published");
       const counts = {};
-      jobs.forEach(j => { counts[j.organization_id] = (counts[j.organization_id] || 0) + 1; });
+      (jobs || []).forEach(j => { counts[j.organization_id] = (counts[j.organization_id] || 0) + 1; });
       return counts;
     },
   });
+
 
   const items = orgs;
   const total = items.length;

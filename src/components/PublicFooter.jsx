@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useSettings } from "@/context/SettingsContext";
+import { Facebook, Instagram, MessageCircle } from "lucide-react";
 
 export default function PublicFooter() {
   const { t } = useLanguage();
+  const { settings } = useSettings();
 
   return (
     <footer className="bg-primary text-primary-foreground">
@@ -10,10 +13,8 @@ export default function PublicFooter() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-                <span className="text-accent-foreground font-bold text-sm">H</span>
-              </div>
-              <span className="font-semibold text-lg">Hello Staff</span>
+              <img src={settings?.logo_url || "/logo.png"} alt="Logo" className="w-8 h-8 object-contain" />
+              <span className="font-semibold text-lg" style={{ fontFamily: settings?.font_family ? `"${settings.font_family}", sans-serif` : undefined }}>Hello Staff</span>
             </div>
             <p className="text-sm text-primary-foreground/60 leading-relaxed">
               {t("footer", "tagline")}
@@ -51,10 +52,22 @@ export default function PublicFooter() {
 
         <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/40">{t("footer", "copyright")}</p>
-          <div className="flex gap-6">
-            <span className="text-sm text-primary-foreground/40">{t("footer", "twitter")}</span>
-            <span className="text-sm text-primary-foreground/40">{t("footer", "linkedin")}</span>
-            <span className="text-sm text-primary-foreground/40">{t("footer", "instagram")}</span>
+          <div className="flex gap-4">
+            {(settings?.facebook_url || !settings) && (
+              <a href={settings?.facebook_url || "#"} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-primary-foreground/5 hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors text-primary-foreground/60">
+                <Facebook className="w-4 h-4" />
+              </a>
+            )}
+            {(settings?.instagram_url || !settings) && (
+              <a href={settings?.instagram_url || "#"} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-primary-foreground/5 hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors text-primary-foreground/60">
+                <Instagram className="w-4 h-4" />
+              </a>
+            )}
+            {(settings?.whatsapp_url || !settings) && (
+              <a href={settings?.whatsapp_url || "#"} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-primary-foreground/5 hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors text-primary-foreground/60">
+                <MessageCircle className="w-4 h-4" />
+              </a>
+            )}
           </div>
         </div>
       </div>

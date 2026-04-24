@@ -1,4 +1,4 @@
-import { AlertCircle, Inbox, RefreshCw, Lock } from "lucide-react";
+import { AlertCircle, RefreshCw, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**

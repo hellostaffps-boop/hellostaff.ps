@@ -3,7 +3,7 @@ import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/hooks/useLanguage";
-import { base44 } from "@/api/base44Client";
+import { subscribeToApplicationMessages, sendApplicationMessage } from "@/lib/supabaseService";
 
 export default function MessageThread({ applicationId, currentUser, senderRole }) {
   const { t } = useLanguage();
@@ -15,23 +15,16 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
 
   useEffect(() => {
     if (!applicationId) return;
+    setLoading(true);
 
-    // Load initial messages
-    base44.entities.ApplicationMessage.filter({ application_id: applicationId }, "created_date")
-      .then((msgs) => {
-        setMessages(msgs);
-        setLoading(false);
-      });
-
-    // Subscribe to new messages
-    const unsubscribe = base44.entities.ApplicationMessage.subscribe((event) => {
-      if (event.data?.application_id === applicationId) {
-        base44.entities.ApplicationMessage.filter({ application_id: applicationId }, "created_date")
-          .then(setMessages);
-      }
+    const unsubscribe = subscribeToApplicationMessages(applicationId, (msgs) => {
+      setMessages(msgs);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
   }, [applicationId]);
 
   useEffect(() => {
@@ -43,14 +36,18 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
     if (!trimmed || sending) return;
     setSending(true);
     setText("");
-    await base44.entities.ApplicationMessage.create({
-      application_id: applicationId,
-      sender_email: currentUser.email || currentUser.uid,
-      sender_name: currentUser.user_metadata?.full_name || currentUser.displayName || currentUser.email,
-      sender_role: senderRole,
-      message: trimmed,
-    });
-    setSending(false);
+    try {
+      await sendApplicationMessage(applicationId, {
+        sender_uid: currentUser?.email,
+        sender_name: currentUser?.user_metadata?.full_name || currentUser?.email,
+        sender_role: senderRole,
+        message: trimmed,
+      });
+    } catch (err) {
+      console.error("[MessageThread] send error", err);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -60,7 +57,7 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
     }
   };
 
-  const senderEmail = currentUser?.email || currentUser?.uid;
+  const senderEmail = currentUser?.email;
 
   if (loading) {
     return (
@@ -94,8 +91,8 @@ export default function MessageThread({ applicationId, currentUser, senderRole }
                     {isOwn ? t("messaging", "you") : msg.sender_name}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {msg.created_date
-                      ? new Date(msg.created_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    {msg.created_at
+                      ? new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                       : ""}
                   </span>
                 </div>

@@ -1,8 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useAuth } from "@/lib/supabaseAuth";
+import { supabase } from "@/lib/supabaseClient";
 import AppSidebar from "./AppSidebar";
 import AppTopbar from "./AppTopbar";
 import MobileBottomNav from "./MobileBottomNav";
@@ -21,17 +20,45 @@ import {
 export default function CandidateLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (!firebaseUser?.uid) return;
-    const q = query(
-      collection(db, 'notifications'),
-      where('user_id', '==', firebaseUser.uid),
-      where('is_read', '==', false)
-    );
-    return onSnapshot(q, (snap) => setUnreadCount(snap.size));
-  }, [firebaseUser?.uid]);
+    if (!user?.email) return;
+
+    // Initial fetch
+    supabase
+      .from('notifications')
+      .select('id', { count: 'exact' })
+      .eq('user_email', user.email)
+      .eq('read', false)
+      .then(({ count }) => {
+        setUnreadCount(count || 0);
+      });
+
+    // Real-time subscription
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'notifications',
+        filter: `user_email=eq.${user.email}`
+      }, () => {
+        supabase
+          .from('notifications')
+          .select('id', { count: 'exact' })
+          .eq('user_email', user.email)
+          .eq('read', false)
+          .then(({ count }) => {
+            setUnreadCount(count || 0);
+          });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email]);
   const { t } = useLanguage();
 
   const links = [

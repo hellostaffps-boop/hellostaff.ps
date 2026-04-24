@@ -12,9 +12,10 @@ import PageHeader from "../../components/PageHeader";
 import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/lib/supabaseAuth";
-import { getEmployerProfile, getOrganization, saveOrganizationIfOwner } from "@/lib/firestoreService";
-import { base44 } from "@/api/base44Client";
+import { getEmployerProfile, getOrganization, saveOrganizationIfOwner } from "@/lib/supabaseService";
+import { uploadFile } from "@/lib/storageService";
 import { getOrgCompletion } from "@/lib/profileCompletion";
+
 
 const BUSINESS_TYPES = [
   { value: "cafe", label: "Café / مقهى" },
@@ -102,9 +103,14 @@ function TeamPhotosInput({ photos = [], onChange }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    onChange([...photos, file_url]);
-    setUploading(false);
+    try {
+      const { file_url } = await uploadFile(file, "team-photos");
+      onChange([...photos, file_url]);
+    } catch (err) {
+      toast.error("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -145,6 +151,7 @@ export default function CompanyProfile() {
     name: "", business_type: "", city: "", address: "",
     description: "", phone: "", email: "", website: "",
     logo_url: "", cover_image_url: "", video_url: "",
+    slogan: "", map_url: "",
     founded_year: "", instagram_url: "", linkedin_url: "",
     culture_values: [], perks: [], team_photos: [],
   });
@@ -179,6 +186,8 @@ export default function CompanyProfile() {
         logo_url: org.logo_url || "",
         cover_image_url: org.cover_image_url || "",
         video_url: org.video_url || "",
+        slogan: org.slogan || "",
+        map_url: org.map_url || "",
         founded_year: org.founded_year || "",
         instagram_url: org.instagram_url || "",
         linkedin_url: org.linkedin_url || "",
@@ -194,6 +203,7 @@ export default function CompanyProfile() {
   const handleSave = async () => {
     if (!orgId) { toast.error("Organization not found"); return; }
     if (!form.name) { toast.error("Company name is required"); return; }
+    if (!form.email) { toast.error("Company email is required"); return; }
     setSaving(true);
     await saveOrganizationIfOwner(uid, orgId, form);
     queryClient.invalidateQueries({ queryKey: ["organization"] });
@@ -205,18 +215,28 @@ export default function CompanyProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
     setLogoUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    set("logo_url", file_url);
-    setLogoUploading(false);
+    try {
+      const { file_url } = await uploadFile(file, "logos");
+      set("logo_url", file_url);
+    } catch (err) {
+      toast.error("Upload failed: " + err.message);
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setCoverUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    set("cover_image_url", file_url);
-    setCoverUploading(false);
+    try {
+      const { file_url } = await uploadFile(file, "covers");
+      set("cover_image_url", file_url);
+    } catch (err) {
+      toast.error("Upload failed: " + err.message);
+    } finally {
+      setCoverUploading(false);
+    }
   };
 
   const completion = getOrgCompletion(org ? { ...org, ...form } : null);
@@ -289,6 +309,10 @@ export default function CompanyProfile() {
           <div>
             <Label className="text-sm">Company Name <span className="text-destructive">*</span></Label>
             <Input value={form.name} onChange={(e) => set("name", e.target.value)} className="mt-1.5" placeholder="Your company name" />
+          </div>
+          <div>
+            <Label className="text-sm">Slogan / الشعار اللفظي</Label>
+            <Input value={form.slogan} onChange={(e) => set("slogan", e.target.value)} className="mt-1.5" placeholder="e.g. Delicious food, Great vibes" />
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -363,20 +387,26 @@ export default function CompanyProfile() {
 
         {/* Contact */}
         <div className={sectionClass}>
-          <h3 className="font-semibold text-sm">Contact & Social / التواصل</h3>
+          <h3 className="font-semibold text-sm">Contact & Location / التواصل والموقع</h3>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <Label className="text-sm">Phone</Label>
-              <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="mt-1.5" placeholder="+966 5X XXX XXXX" />
-            </div>
-            <div>
-              <Label className="text-sm">Email</Label>
+              <Label className="text-sm">Email <span className="text-destructive">*</span></Label>
               <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="mt-1.5" placeholder="hr@company.com" />
             </div>
+            <div>
+              <Label className="text-sm">Phone (Optional)</Label>
+              <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="mt-1.5" placeholder="+966 5X XXX XXXX" />
+            </div>
           </div>
-          <div>
-            <Label className="text-sm">Website</Label>
-            <Input value={form.website} onChange={(e) => set("website", e.target.value)} className="mt-1.5" placeholder="https://yourcompany.com" />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm">Website</Label>
+              <Input value={form.website} onChange={(e) => set("website", e.target.value)} className="mt-1.5" placeholder="https://yourcompany.com" />
+            </div>
+            <div>
+              <Label className="text-sm">Google Maps URL</Label>
+              <Input value={form.map_url} onChange={(e) => set("map_url", e.target.value)} className="mt-1.5" placeholder="https://maps.app.goo.gl/..." />
+            </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MessageCircle, Calendar, MapPin } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/lib/supabaseAuth";
-import { getApplicationById } from "@/lib/firestoreService";
+import { getApplicationById } from "@/lib/supabaseService";
 import { getInterviewSlot } from "@/lib/interviewSlotService";
 import { Badge } from "@/components/ui/badge";
 import MessageThread from "@/components/MessageThread";
@@ -22,12 +22,12 @@ export default function ApplicationChat() {
   const { id } = useParams();
   const { lang } = useLanguage();
   const isAr = lang === "ar";
-  const { user: firebaseUser, userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
 
   const { data: application, isLoading } = useQuery({
     queryKey: ["application", id],
     queryFn: () => getApplicationById(id),
-    enabled: !!id && !!firebaseUser,
+    enabled: !!id && !!user,
   });
 
   const { data: interviewSlot } = useQuery({
@@ -57,7 +57,7 @@ export default function ApplicationChat() {
     );
   }
 
-  if (isCandidate && application.candidate_email !== firebaseUser?.email) {
+  if (isCandidate && application.candidate_email !== user?.email) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <p className="text-muted-foreground">{isAr ? "غير مصرح" : "Access denied"}</p>
@@ -118,10 +118,10 @@ export default function ApplicationChat() {
 
       {/* Chat */}
       <div className="bg-white rounded-2xl border border-border p-4 flex-1 flex flex-col min-h-0">
-        {firebaseUser ? (
+        {user ? (
           <MessageThread
             applicationId={id}
-            currentUser={firebaseUser}
+            currentUser={user}
             senderRole={role}
           />
         ) : (

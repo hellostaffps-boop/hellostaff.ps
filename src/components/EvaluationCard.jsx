@@ -2,10 +2,9 @@ import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Lock, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getApplicationEvaluation, saveApplicationEvaluation } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getApplicationEvaluation, saveApplicationEvaluation } from "@/lib/supabaseService";
 
 const TAGS = [
   { value: "cultural_fit", en: "Cultural Fit", ar: "التوافق الثقافي" },
@@ -28,7 +27,7 @@ const RECOMMENDATIONS = [
 export default function EvaluationCard({ applicationId, organizationId }) {
   const { t } = useLanguage();
   const { lang } = useLanguage();
-  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
   const isArabic = lang === "ar";
 
@@ -46,8 +45,8 @@ export default function EvaluationCard({ applicationId, organizationId }) {
 
   // Load own evaluation if it exists
   const ownEvaluation = useMemo(() => {
-    return evaluations.find(e => e.reviewer_email === firebaseUser?.email);
-  }, [evaluations, firebaseUser?.email]);
+    return evaluations.find(e => e.reviewer_email === user?.email);
+  }, [evaluations, user?.email]);
 
   // Populate form with own evaluation
   useEffect(() => {
@@ -63,8 +62,8 @@ export default function EvaluationCard({ applicationId, organizationId }) {
   const saveMutation = useMutation({
     mutationFn: () =>
       saveApplicationEvaluation(applicationId, organizationId, {
-        reviewer_email: firebaseUser.email,
-        reviewer_name: userProfile?.full_name || firebaseUser.email,
+        reviewer_email: user.email,
+        reviewer_name: userProfile?.full_name || user.email,
         overall_score: score,
         strengths: strengths.split("\n").filter(s => s.trim()),
         concerns: concerns.split("\n").filter(c => c.trim()),

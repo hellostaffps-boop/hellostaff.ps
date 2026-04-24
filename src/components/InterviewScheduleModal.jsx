@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, MapPin, Video, Phone, Users, X } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { Video, Phone, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { scheduleInterview } from "@/lib/interviewService";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 
 const TYPE_OPTIONS = [
@@ -16,7 +16,7 @@ const TYPE_OPTIONS = [
 ];
 
 export default function InterviewScheduleModal({ application, existingInterview, onClose, onSuccess }) {
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const { lang } = useLanguage();
   const ar = lang === "ar";
 
@@ -39,7 +39,7 @@ export default function InterviewScheduleModal({ application, existingInterview,
   }, [existingInterview]);
 
   const mutation = useMutation({
-    mutationFn: () => scheduleInterview(firebaseUser.uid, application.id, form),
+    mutationFn: () => scheduleInterview(user.email, application.id, form),
     onSuccess: () => {
       toast.success(ar ? "تمت جدولة المقابلة بنجاح" : "Interview scheduled successfully");
       onSuccess?.();

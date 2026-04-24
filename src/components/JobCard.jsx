@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
-import { MapPin, Clock, Bookmark, CheckCircle2 } from "lucide-react";
+import { MapPin, Clock, Bookmark, CheckCircle2, ShieldCheck, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/hooks/useLanguage";
+import { formatDate } from "@/lib/uiHelpers";
 
 export default function JobCard({ job, showSave, onSave, saved, applied }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const typeLabels = {
     barista: t("jobCard", "typeBarista"),
@@ -26,7 +27,7 @@ export default function JobCard({ job, showSave, onSave, saved, applied }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-border p-6 hover:shadow-lg hover:shadow-black/5 transition-all group">
+    <div className="card-premium hover-lift rounded-xl p-6 transition-all group">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -38,6 +39,12 @@ export default function JobCard({ job, showSave, onSave, saved, applied }) {
                 {employmentLabels[job.employment_type] || job.employment_type}
               </Badge>
             )}
+            {job.is_featured && (
+              <Badge className="text-xs bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
+                <Zap className="w-3 h-3 fill-amber-700" />
+                {t("pricingValue", "featured")}
+              </Badge>
+            )}
           </div>
 
           <Link to={`/jobs/${job.id}`}>
@@ -46,8 +53,11 @@ export default function JobCard({ job, showSave, onSave, saved, applied }) {
             </h3>
           </Link>
 
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
             {job.organization_name || t("jobCard", "company")}
+            {job.is_verified && (
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-500" title={t("pricingValue", "verifiedPartner")} />
+            )}
           </p>
           {job.description && (
             <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{job.description}</p>
@@ -65,9 +75,9 @@ export default function JobCard({ job, showSave, onSave, saved, applied }) {
                 {job.salary_min}{job.salary_max ? `–${job.salary_max}` : ""} / {job.salary_period || t("jobCard", "month")}
               </span>
             )}
-            {job.created_at?.toDate && (
+            {job.created_at && (
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" /> {job.created_at.toDate().toLocaleDateString()}
+                <Clock className="w-3.5 h-3.5" /> {formatDate(job.created_at, lang)}
               </span>
             )}
           </div>
@@ -76,7 +86,7 @@ export default function JobCard({ job, showSave, onSave, saved, applied }) {
         <div className="flex flex-col items-end gap-1 shrink-0">
           {applied && (
             <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium">
-              <CheckCircle2 className="w-3 h-3" /> {useLanguage ? null : null}
+              <CheckCircle2 className="w-3 h-3" /> {t("common", "applied") || (lang === 'ar' ? 'تم التقديم' : 'Applied')}
             </span>
           )}
           {showSave && (

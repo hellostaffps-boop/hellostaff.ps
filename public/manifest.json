@@ -1,0 +1,21 @@
+{
+  "name": "Hello Staff",
+  "short_name": "HelloStaff",
+  "description": "منصة توظيف الضيافة في فلسطين | Palestine Hospitality Jobs Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a5f",
+  "orientation": "portrait-primary",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

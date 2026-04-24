@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getApplicationsByOrg, getJobsByOrg, updateApplicationStatus } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getEmployerProfile, getApplicationsByOrg, getJobsByOrg, updateApplicationStatus } from "@/lib/supabaseService";
+
 import { getInterviewsForApplications } from "@/lib/interviewService";
 import InterviewScheduleModal from "@/components/InterviewScheduleModal";
 import InterviewNotesModal from "@/components/InterviewNotesModal";
@@ -29,7 +30,7 @@ const STATUS_TABS = ["all", "submitted", "reviewing", "shortlisted", "rejected",
 
 export default function EmployerApplications() {
   const { t, lang } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [statusTab, setStatusTab] = useState("all");
@@ -40,9 +41,9 @@ export default function EmployerApplications() {
   const [rankingJob, setRankingJob] = useState(null);
 
   const { data: employerProfile } = useQuery({
-    queryKey: ["employer-profile", firebaseUser?.uid],
-    queryFn: () => getEmployerProfile(firebaseUser.uid),
-    enabled: !!firebaseUser,
+    queryKey: ["employer-profile", user?.email],
+    queryFn: () => getEmployerProfile(user.email),
+    enabled: !!user,
   });
 
   const orgId = employerProfile?.organization_id;
@@ -67,7 +68,7 @@ export default function EmployerApplications() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: ({ id, status }) => updateApplicationStatus(firebaseUser.uid, id, status),
+    mutationFn: ({ id, status }) => updateApplicationStatus(user.email, id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employer-applications"] });
       toast.success(t("appManagement", "statusUpdated"));
@@ -187,7 +188,7 @@ export default function EmployerApplications() {
                     </div>
                     <div className="text-xs text-muted-foreground mb-1">{app.job_title}</div>
                     <div className="text-xs text-muted-foreground">
-                      {t("applications", "applied")} {app.applied_at?.toDate ? app.applied_at.toDate().toLocaleDateString() : ""}
+                      {t("applications", "applied")} {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : ""}
                     </div>
                     {app.cover_letter && (
                       <p className="text-xs text-muted-foreground mt-2 line-clamp-2 bg-secondary/40 rounded-lg px-3 py-2">

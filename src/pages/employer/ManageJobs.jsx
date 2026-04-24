@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getJobsByOrg, updateJob } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getEmployerProfile, getJobsByOrg, updateJob } from "@/lib/supabaseService";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+
 
 const STATUS_COLORS = {
   draft: "bg-secondary text-secondary-foreground border-border",
@@ -24,15 +26,15 @@ const STATUS_TABS = ["all", "published", "draft", "closed"];
 export default function ManageJobs() {
   const { t, lang } = useLanguage();
   const ar = lang === "ar";
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState("all");
 
   const { data: employerProfile } = useQuery({
-    queryKey: ["employer-profile", firebaseUser?.uid],
-    queryFn: () => getEmployerProfile(firebaseUser.uid),
-    enabled: !!firebaseUser,
+    queryKey: ["employer-profile", user?.email],
+    queryFn: () => getEmployerProfile(user.email),
+    enabled: !!user,
   });
 
   const orgId = employerProfile?.organization_id;
@@ -121,8 +123,10 @@ export default function ManageJobs() {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" />
+        <div className="space-y-4 py-8">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
         </div>
       ) : jobs.length === 0 ? (
         <EmptyState icon={Briefcase} title={t("dashboard", "noJobsYet")} description={t("dashboard", "noJobsYetDesc")}
@@ -132,48 +136,61 @@ export default function ManageJobs() {
       ) : (
         <div className="space-y-3">
           {filtered.map((job) => (
-            <div key={job.id} className="bg-white rounded-xl border border-border p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div key={job.id} className="bg-white rounded-xl border border-border p-4 sm:p-5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm truncate">{job.title}</span>
-                    <Badge className={`text-xs border ${STATUS_COLORS[job.status] || "bg-secondary"}`}>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-semibold text-sm sm:text-base truncate">{job.title}</span>
+                    <Badge className={`text-[10px] sm:text-xs border ${STATUS_COLORS[job.status] || "bg-secondary"}`}>
                       {t("status", job.status) || job.status}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
-                    {job.location && <span>{job.location}</span>}
-                    {job.employment_type && <span>· {t("jobCard", `emp${job.employment_type.split("_").map(w => w[0].toUpperCase() + w.slice(1)).join("")}`)}</span>}
-                    <span>· {job.created_at?.toDate ? job.created_at.toDate().toLocaleDateString() : ""}</span>
+                  <div className="flex items-center gap-x-3 gap-y-1 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
+                    {job.location && (
+                      <span className="flex items-center gap-1">
+                        {job.location}
+                      </span>
+                    )}
+                    {job.employment_type && (
+                      <span>· {t("jobCard", `emp${job.employment_type.split("_").map(w => w[0].toUpperCase() + w.slice(1)).join("")}`)}</span>
+                    )}
+                    <span>· {job.created_at ? new Date(job.created_at).toLocaleDateString() : ""}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <JobShareMenu job={job} ar={ar} />
-                  <Link to={`/jobs/${job.id}`}>
-                    <Button size="sm" variant="ghost" className="h-8 text-xs">{t("common", "view")}</Button>
-                  </Link>
-                  {job.status === "draft" && (
-                    <Button size="sm" variant="outline" className="h-8 text-xs text-green-700 border-green-200 hover:bg-green-50"
-                      onClick={() => updateStatus.mutate({ id: job.id, status: "published" })}
-                      disabled={updateStatus.isPending}>
-                      {t("manageJobs", "publish")}
-                    </Button>
-                  )}
-                  {job.status === "published" && (
-                    <Button size="sm" variant="outline" className="h-8 text-xs text-muted-foreground"
-                      onClick={() => updateStatus.mutate({ id: job.id, status: "closed" })}
-                      disabled={updateStatus.isPending}>
-                      {t("manageJobs", "close")}
-                    </Button>
-                  )}
-                  {job.status === "closed" && (
-                    <Button size="sm" variant="outline" className="h-8 text-xs text-green-700 border-green-200 hover:bg-green-50"
-                      onClick={() => updateStatus.mutate({ id: job.id, status: "published" })}
-                      disabled={updateStatus.isPending}>
-                      {t("manageJobs", "reopen")}
-                    </Button>
-                  )}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <JobShareMenu job={job} ar={ar} />
+                    <Link to={`/jobs/${job.id}`}>
+                      <Button size="sm" variant="ghost" className="h-8 sm:h-9 text-[10px] sm:text-xs px-2 sm:px-3">
+                        {t("common", "view")}
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    {job.status === "draft" && (
+                      <Button size="sm" variant="outline" className="h-8 sm:h-9 text-[10px] sm:text-xs text-green-700 border-green-200 hover:bg-green-50 px-2 sm:px-3"
+                        onClick={() => updateStatus.mutate({ id: job.id, status: "published" })}
+                        disabled={updateStatus.isPending}>
+                        {t("manageJobs", "publish")}
+                      </Button>
+                    )}
+                    {job.status === "published" && (
+                      <Button size="sm" variant="outline" className="h-8 sm:h-9 text-[10px] sm:text-xs text-muted-foreground px-2 sm:px-3"
+                        onClick={() => updateStatus.mutate({ id: job.id, status: "closed" })}
+                        disabled={updateStatus.isPending}>
+                        {t("manageJobs", "close")}
+                      </Button>
+                    )}
+                    {job.status === "closed" && (
+                      <Button size="sm" variant="outline" className="h-8 sm:h-9 text-[10px] sm:text-xs text-green-700 border-green-200 hover:bg-green-50 px-2 sm:px-3"
+                        onClick={() => updateStatus.mutate({ id: job.id, status: "published" })}
+                        disabled={updateStatus.isPending}>
+                        {t("manageJobs", "reopen")}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

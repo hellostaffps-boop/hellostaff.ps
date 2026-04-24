@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, FileText, Users, Eye, UserPlus, Building2, CheckCircle2 } from "lucide-react";
+import { Briefcase, FileText, Users, Eye, UserPlus, Building2, CheckCircle2, ShieldCheck, Zap, Crown } from "lucide-react";
 
 const JOB_STATUS = {
   published: { color: "bg-green-50 text-green-700 border-green-200",  dot: "bg-green-500",  label: "Published" },
@@ -34,19 +34,21 @@ import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getEmployerOrganizationJobs, getApplicationsByOrg, getOrganization, getApplicationEvaluation, getEmployerHiringReviewSummary } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getEmployerProfile, getEmployerOrganizationJobs, getApplicationsByOrg, getOrganization, getEmployerHiringReviewSummary } from "@/lib/supabaseService";
+
 import { getOrganizationMemberCount } from "@/lib/teamService";
 import { getOrgCompletion } from "@/lib/profileCompletion";
+import { useSubscription } from "@/hooks/useSubscription";
 
 export default function Dashboard() {
   const { t } = useLanguage();
-  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const { user, userProfile } = useAuth();
 
   const { data: employerProfile } = useQuery({
-    queryKey: ["employer-profile", firebaseUser?.email],
-    queryFn: () => getEmployerProfile(firebaseUser.email),
-    enabled: !!firebaseUser,
+    queryKey: ["employer-profile", user?.email],
+    queryFn: () => getEmployerProfile(user.email),
+    enabled: !!user,
   });
 
   const orgId = employerProfile?.organization_id;
@@ -60,9 +62,9 @@ export default function Dashboard() {
   const orgCompletion = getOrgCompletion(org);
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["employer-jobs", firebaseUser?.email],
-    queryFn: () => getEmployerOrganizationJobs(firebaseUser.email),
-    enabled: !!firebaseUser,
+    queryKey: ["employer-jobs", user?.email],
+    queryFn: () => getEmployerOrganizationJobs(user.email),
+    enabled: !!user,
   });
 
   const { data: applications = [] } = useQuery({
@@ -78,15 +80,17 @@ export default function Dashboard() {
   });
 
   const { data: reviewSummary = { reviewingCount: 0, shortlistedCount: 0 } } = useQuery({
-    queryKey: ["hiring-review-summary", firebaseUser?.email],
-    queryFn: () => getEmployerHiringReviewSummary(firebaseUser.email),
-    enabled: !!firebaseUser,
+    queryKey: ["hiring-review-summary", user?.email],
+    queryFn: () => getEmployerHiringReviewSummary(user.email),
+    enabled: !!user,
   });
+
+  const { isSubscribed, activeSub, isPremium } = useSubscription();
 
   const now = Date.now();
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
   const newApps = applications.filter((a) => {
-    const ts = new Date(a.created_date || 0).getTime();
+    const ts = new Date(a.created_at || a.applied_at || 0).getTime();
     return ts > sevenDaysAgo;
   }).length;
   const shortlisted = applications.filter((a) => a.status === "shortlisted").length;
@@ -131,6 +135,52 @@ export default function Dashboard() {
             editPath="/employer/company"
             type="org"
           />
+        </div>
+      )}
+
+      {/* Subscription Status Card */}
+      {isOwner && (
+        <div className={`mb-8 p-6 rounded-2xl border-2 transition-all ${
+          isSubscribed 
+            ? "bg-green-50/30 border-green-200 shadow-sm" 
+            : "bg-amber-50/30 border-amber-200 shadow-sm"
+        }`}>
+          <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-start">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
+              isSubscribed ? "bg-green-100" : "bg-amber-100"
+            }`}>
+              {isPremium ? (
+                <Crown className="w-8 h-8 text-amber-600" />
+              ) : isSubscribed ? (
+                <ShieldCheck className="w-8 h-8 text-green-600" />
+              ) : (
+                <Zap className="w-8 h-8 text-amber-600" />
+              )}
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-lg mb-1">
+                {isSubscribed 
+                  ? (language === 'ar' ? `شريك هيلو ستاف - خطة ${activeSub.plan === 'monthly' ? 'شهرية' : activeSub.plan === 'annual' ? 'سنوية' : 'بريميوم'}` : `Hello Staff Partner - ${activeSub.plan.toUpperCase()} Plan`)
+                  : (language === 'ar' ? 'قم بترقية حسابك للوصول لأفضل الكفاءات' : 'Upgrade your account to reach top talent')}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {isSubscribed 
+                  ? (language === 'ar' ? `اشتراكك فعال حتى ${new Date(activeSub.expires_at).toLocaleDateString('ar')}. استمتع بمميزات الوصول الكامل.` : `Your subscription is active until ${new Date(activeSub.expires_at).toLocaleDateString()}. Enjoy full access features.`)
+                  : (language === 'ar' ? 'احصل على شارة التوثيق، ميز وظائفك في مقدمة البحث، واطلع على تحليلات متقدمة.' : 'Get a verified badge, feature your jobs at the top of search, and access advanced analytics.')}
+              </p>
+            </div>
+
+            <div className="shrink-0">
+              <Link to="/employer/pricing">
+                <Button variant={isSubscribed ? "outline" : "default"} className={!isSubscribed ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}>
+                  {isSubscribed 
+                    ? (language === 'ar' ? 'إدارة الاشتراك' : 'Manage Plan')
+                    : (language === 'ar' ? 'اشترك الآن' : 'Subscribe Now')}
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       )}
 

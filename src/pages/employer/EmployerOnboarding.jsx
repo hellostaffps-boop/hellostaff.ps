@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Building2, MapPin, Users, ChevronRight, ChevronLeft,
-  Check, Briefcase, Loader2, Star, Coffee
+  Building2, MapPin, ChevronRight, ChevronLeft,
+  Check, Briefcase, Loader2, Star, Coffee, Crown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,15 +11,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { base44 } from "@/api/base44Client";
-import { saveOrganizationIfOwner, getEmployerProfile } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { saveOrganizationIfOwner, getEmployerProfile } from "@/lib/supabaseService";
+import { PLANS, activateFreePlan } from "@/lib/subscriptionService";
+
 
 const STEPS = [
   { id: 1, label: "Business Info", icon: Building2 },
   { id: 2, label: "Location", icon: MapPin },
   { id: 3, label: "About", icon: Star },
-  { id: 4, label: "Done!", icon: Check },
+  { id: 4, label: "Plan", icon: Crown },
+  { id: 5, label: "Done!", icon: Check },
 ];
 
 const BUSINESS_TYPES = [
@@ -98,9 +100,10 @@ function TagPicker({ selected, options, onChange }) {
 
 export default function EmployerOnboarding() {
   const navigate = useNavigate();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [orgId, setOrgId] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -120,20 +123,22 @@ export default function EmployerOnboarding() {
   const canNext = () => {
     if (step === 1) return form.name.trim() && form.business_type;
     if (step === 2) return form.city.trim();
+    if (step === 4) return false;
     return true;
   };
 
   const handleNext = () => {
     if (step < 3) { setStep((s) => s + 1); return; }
-    handleSave();
+    if (step === 3) handleSave();
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const profile = await getEmployerProfile(firebaseUser.email);
+      const profile = await getEmployerProfile(user.email);
       if (profile?.organization_id) {
-        await saveOrganizationIfOwner(firebaseUser.email, profile.organization_id, {
+        setOrgId(profile.organization_id);
+        await saveOrganizationIfOwner(user.email, profile.organization_id, {
           ...form,
           industry: form.business_type,
           status: "active",
@@ -142,6 +147,24 @@ export default function EmployerOnboarding() {
       setStep(4);
     } catch (e) {
       toast.error("Failed to save. Please try again.");
+    }
+    setSaving(false);
+  };
+
+  const selectPlan = async (planId) => {
+    setSaving(true);
+    try {
+      if (orgId) {
+        await activateFreePlan(orgId, user.email);
+      }
+      if (planId === "free") {
+        setStep(5);
+      } else {
+        navigate(`/employer/pricing?plan=${planId}&onboarding=true`, { replace: true });
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Error setting up plan");
     }
     setSaving(false);
   };
@@ -162,7 +185,7 @@ export default function EmployerOnboarding() {
         </div>
 
         <div className="px-8 py-6">
-          {step < 4 && <StepIndicator current={step} steps={STEPS.slice(0, 3)} />}
+          {step < 5 && <StepIndicator current={step} steps={STEPS.slice(0, 4)} />}
 
           {/* Step 1: Business Info */}
           {step === 1 && (
@@ -247,8 +270,60 @@ export default function EmployerOnboarding() {
             </div>
           )}
 
-          {/* Step 4: Done */}
+          {/* Step 4: Plan Selection */}
           {step === 4 && (
+            <div className="space-y-4">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold">Choose your subscription plan</h2>
+                <p className="text-sm text-muted-foreground mt-1">Select a plan to start posting jobs. Paid plans include featured listings.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {Object.values(PLANS).filter(p => ["free", "monthly", "annual"].includes(p.id)).map((plan) => (
+                  <div key={plan.id} className={cn(
+                    "relative bg-white rounded-xl border p-4 text-center flex flex-col transition-all duration-300 hover:border-accent hover:shadow-md cursor-pointer",
+                    plan.id === "annual" ? "border-accent/40 shadow-sm border-2" : "border-border"
+                  )} onClick={() => selectPlan(plan.id)}>
+                    {plan.id === "annual" && (
+                       <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-accent text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                         Best Value
+                       </div>
+                    )}
+                    <h3 className="text-[13px] font-bold mb-1">{plan.label_en}</h3>
+                    <div className="flex items-baseline justify-center gap-1 mb-1">
+                      <span className="text-xl font-extrabold">{plan.price}</span>
+                      <span className="text-[10px] text-muted-foreground">ILS</span>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground mb-3 h-6 leading-tight">{plan.desc_en}</p>
+                    
+                    <ul className="text-start space-y-1.5 mb-4 flex-1">
+                      <li className="flex items-start gap-1.5 text-[10px]">
+                        <Check className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
+                        <span className="leading-tight">{plan.jobs_limit} Job Post{plan.jobs_limit > 1 && "s"}</span>
+                      </li>
+                      <li className="flex items-start gap-1.5 text-[10px]">
+                        <Check className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
+                        <span className="leading-tight">{plan.duration_days} Days active</span>
+                      </li>
+                      {plan.price > 0 && (
+                        <li className="flex items-start gap-1.5 text-[10px]">
+                          <Crown className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                          <span className="font-medium text-amber-600 leading-tight">Featured Profile</span>
+                        </li>
+                      )}
+                    </ul>
+
+                    <Button variant={plan.id === "annual" ? "default" : "outline"} className={cn("w-full h-8 text-[11px]", plan.id === "annual" && "bg-accent hover:bg-accent/90 text-accent-foreground")} disabled={saving}>
+                      Select
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Done */}
+          {step === 5 && (
             <div className="text-center py-4 space-y-4">
               <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                 <Check className="w-8 h-8 text-accent" />

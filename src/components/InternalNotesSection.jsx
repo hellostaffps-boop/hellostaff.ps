@@ -1,15 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, Trash2, Edit2, X } from "lucide-react";
+import { MessageCircle, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getApplicationInternalNotes, createApplicationInternalNote, updateApplicationInternalNote } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getApplicationInternalNotes, createApplicationInternalNote, updateApplicationInternalNote } from "@/lib/supabaseService";
 
 export default function InternalNotesSection({ applicationId, organizationId }) {
-  const { t } = useLanguage();
-  const { lang } = useLanguage();
-  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const { t, lang } = useLanguage();
+  const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
 
   const [noteInput, setNoteInput] = useState("");
@@ -25,8 +24,8 @@ export default function InternalNotesSection({ applicationId, organizationId }) 
   const createNoteMutation = useMutation({
     mutationFn: () => 
       createApplicationInternalNote(applicationId, organizationId, {
-        author_email: firebaseUser.email,
-        author_name: userProfile?.full_name || firebaseUser.email,
+        author_email: user.email,
+        author_name: userProfile?.full_name || user.email,
         body: noteInput,
       }),
     onSuccess: () => {
@@ -88,14 +87,14 @@ export default function InternalNotesSection({ applicationId, organizationId }) 
                   <div className="mb-1">
                     <span className="font-medium">{note.author_name}</span>
                     <span className="text-muted-foreground ms-2">
-                      {note.created_at?.toDate ? new Date(note.created_at.toDate()).toLocaleString(
+                      {note.created_at ? new Date(note.created_at).toLocaleString(
                         isArabic ? "ar-SA" : "en-GB",
                         { dateStyle: "short", timeStyle: "short" }
                       ) : ""}
                     </span>
                   </div>
                   <p className="text-foreground whitespace-pre-wrap break-words mb-2">{note.body}</p>
-                  {note.author_email === firebaseUser.email && (
+                  {note.author_email === user.email && (
                     <div className="flex gap-1">
                       <button
                         onClick={() => {

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X, ArrowUpDown } from "lucide-react";
@@ -9,14 +9,16 @@ import JobCard from "../components/JobCard";
 import EmptyState from "../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/lib/supabaseAuth";
-import { getPublishedJobs, getCandidateProfile, getCurrentCandidateApplications } from "@/lib/firestoreService";
+import { getPublishedJobs, getCandidateProfile, getCurrentCandidateApplications } from "@/lib/supabaseService";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
+import { useSearchParams } from "react-router-dom";
 
 const INITIAL_FILTERS = { search: "", category: "all", employment: "all", location: "", sort: "newest" };
 
 export default function BrowseJobs() {
   const { t } = useLanguage();
-  const { user: firebaseUser, userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
+  const [searchParams] = useSearchParams();
 
   usePageMeta({
     title: "Browse Hospitality Jobs",
@@ -25,7 +27,18 @@ export default function BrowseJobs() {
   });
   const isCandidate = userProfile?.role === "candidate";
   const { savedJobIds, toggleSave } = useSavedJobs();
-  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [filters, setFilters] = useState(() => {
+    const typeFromUrl = searchParams.get("type");
+    return { ...INITIAL_FILTERS, category: typeFromUrl || "all" };
+  });
+
+  // Update filter when URL type param changes
+  useEffect(() => {
+    const typeFromUrl = searchParams.get("type");
+    if (typeFromUrl) {
+      setFilters(f => ({ ...f, category: typeFromUrl }));
+    }
+  }, [searchParams]);
 
   const set = (key, val) => setFilters((f) => ({ ...f, [key]: val }));
   const hasActiveFilters = filters.search || filters.category !== "all" || filters.employment !== "all" || filters.location || filters.sort !== "newest";
@@ -65,15 +78,15 @@ export default function BrowseJobs() {
   });
 
   const { data: candidateProfile } = useQuery({
-    queryKey: ["my-candidate-profile", firebaseUser?.email],
-    queryFn: () => getCandidateProfile(firebaseUser.email),
-    enabled: !!firebaseUser && isCandidate,
+    queryKey: ["my-candidate-profile", user?.email],
+    queryFn: () => getCandidateProfile(user.email),
+    enabled: !!user && isCandidate,
   });
 
   const { data: myApplications = [] } = useQuery({
-    queryKey: ["my-applications", firebaseUser?.email],
-    queryFn: () => getCurrentCandidateApplications(firebaseUser.email),
-    enabled: !!firebaseUser && isCandidate,
+    queryKey: ["my-applications", user?.email],
+    queryFn: () => getCurrentCandidateApplications(user.email),
+    enabled: !!user && isCandidate,
   });
 
   const appliedJobIds = useMemo(() => new Set(myApplications.map((a) => a.job_id)), [myApplications]);
@@ -93,8 +106,12 @@ export default function BrowseJobs() {
     if (filters.location) list = list.filter((j) => j.location?.toLowerCase().includes(filters.location.toLowerCase()));
 
     list.sort((a, b) => {
-      const dateA = new Date(a.created_date || 0).getTime();
-      const dateB = new Date(b.created_date || 0).getTime();
+      // Always prioritize featured jobs first
+      if (a.is_featured && !b.is_featured) return -1;
+      if (!a.is_featured && b.is_featured) return 1;
+
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
       if (filters.sort === "oldest") return dateA - dateB;
       if (filters.sort === "salary_high") return (b.salary_max || b.salary_min || 0) - (a.salary_max || a.salary_min || 0);
       if (filters.sort === "salary_low") return (a.salary_min || 0) - (b.salary_min || 0);

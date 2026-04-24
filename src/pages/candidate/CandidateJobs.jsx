@@ -11,7 +11,8 @@ import JobCard from "../../components/JobCard";
 import EmptyState from "../../components/EmptyState";
 import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
-import { getPublishedJobs } from "@/lib/firestoreService";
+import { getPublishedJobs } from "@/lib/supabaseService";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const DEFAULT_FILTERS = {
   search: "",
@@ -227,8 +228,10 @@ export default function CandidateJobs() {
 
       {/* Results */}
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" />
+        <div className="space-y-4">
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState

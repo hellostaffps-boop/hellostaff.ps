@@ -10,8 +10,10 @@ import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getOrganization } from "@/lib/firestoreService";
+import { formatDate } from "@/lib/uiHelpers";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getEmployerProfile, getOrganization } from "@/lib/supabaseService";
+
 import {
   getOrganizationMembersForOwner,
   getPendingInvitations,
@@ -28,8 +30,9 @@ const ROLE_BADGE = {
 
 export default function TeamMembers() {
   const { t, lang: language } = useLanguage();
-  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
+
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("manager");
@@ -39,9 +42,9 @@ export default function TeamMembers() {
     ORG_ROLE_LABELS[language]?.[role] || ORG_ROLE_LABELS.en[role] || role;
 
   const { data: employerProfile } = useQuery({
-    queryKey: ["employer-profile", firebaseUser?.uid],
-    queryFn: () => getEmployerProfile(firebaseUser.uid),
-    enabled: !!firebaseUser,
+    queryKey: ["employer-profile", user?.email],
+    queryFn: () => getEmployerProfile(user.email),
+    enabled: !!user,
   });
 
   const orgId = employerProfile?.organization_id;
@@ -55,18 +58,18 @@ export default function TeamMembers() {
 
   const { data: members = [], isLoading: loadingMembers } = useQuery({
     queryKey: ["org-members", orgId],
-    queryFn: () => getOrganizationMembersForOwner(firebaseUser.uid, orgId),
+    queryFn: () => getOrganizationMembersForOwner(user.email, orgId),
     enabled: !!orgId && isOwner,
   });
 
   const { data: pendingInvites = [], isLoading: loadingInvites } = useQuery({
     queryKey: ["pending-invitations", orgId],
-    queryFn: () => getPendingInvitations(firebaseUser.uid, orgId),
+    queryFn: () => getPendingInvitations(user.email, orgId),
     enabled: !!orgId && isOwner,
   });
 
   const inviteMutation = useMutation({
-    mutationFn: () => requestAddTeamMember(firebaseUser.uid, orgId, inviteEmail, inviteRole),
+    mutationFn: () => requestAddTeamMember(user.email, orgId, inviteEmail, inviteRole),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-invitations", orgId] });
       toast.success(language === "ar" ? "تمت إضافة الدعوة بنجاح" : "Invitation sent successfully");
@@ -83,7 +86,7 @@ export default function TeamMembers() {
   });
 
   const cancelInviteMutation = useMutation({
-    mutationFn: (inviteId) => cancelTeamInvitation(firebaseUser.uid, orgId, inviteId),
+    mutationFn: (inviteId) => cancelTeamInvitation(user.email, orgId, inviteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-invitations", orgId] });
       toast.success(language === "ar" ? "تم إلغاء الدعوة" : "Invitation cancelled");
@@ -92,7 +95,7 @@ export default function TeamMembers() {
 
   const removeMemberMutation = useMutation({
     mutationFn: ({ memberDocId, memberUserId }) =>
-      requestRemoveOrganizationMember(firebaseUser.uid, orgId, memberDocId, memberUserId),
+      requestRemoveOrganizationMember(user.email, orgId, memberDocId, memberUserId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-members", orgId] });
       toast.success(language === "ar" ? "تمت إزالة العضو" : "Member removed");
@@ -242,11 +245,11 @@ export default function TeamMembers() {
                             </Badge>
                           )}
                         </div>
-                        {member.created_at?.toDate && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                        {member.created_at && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                             <Clock className="w-3 h-3" />
-                            {member.created_at.toDate().toLocaleDateString()}
-                          </div>
+                            {formatDate(member.created_at, language)}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -298,11 +301,11 @@ export default function TeamMembers() {
                             {language === "ar" ? "معلقة" : "Pending"}
                           </Badge>
                         </div>
-                        {invite.created_at?.toDate && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                        {invite.created_at && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                             <Clock className="w-3 h-3" />
-                            {invite.created_at.toDate().toLocaleDateString()}
-                          </div>
+                            {formatDate(invite.created_at, language)}
+                          </span>
                         )}
                       </div>
                     </div>

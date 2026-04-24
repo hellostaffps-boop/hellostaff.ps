@@ -1,11 +1,15 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Bell } from "lucide-react";
 
 export default function MobileBottomNav({ links }) {
   const location = useLocation();
 
-  // Show only the first 5 links in the bottom bar
-  const mainLinks = links.slice(0, 5);
+  // Find the notification link and ensure it's always visible
+  const notifLink = links.find(l => l.path.includes("notifications"));
+  // Get the first 4 non-notification links + notification link = 5 items
+  const otherLinks = links.filter(l => !l.path.includes("notifications")).slice(0, 4);
+  const mainLinks = notifLink ? [...otherLinks, notifLink] : links.slice(0, 5);
 
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-border safe-area-pb">

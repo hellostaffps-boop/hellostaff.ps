@@ -5,8 +5,9 @@ import { ChevronLeft, ExternalLink, FileText, Mail, CalendarPlus, MessageCircle,
 import MessageThread from "@/components/MessageThread";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getApplicationById, getApplicationEvaluation } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getApplicationById, getApplicationEvaluation } from "@/lib/supabaseService";
+
 import InternalNotesSection from "@/components/InternalNotesSection";
 import EvaluationCard from "@/components/EvaluationCard";
 import ProposeInterviewSlotsModal from "@/components/ProposeInterviewSlotsModal";
@@ -28,7 +29,7 @@ export default function EmployerApplicationDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t, lang } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const [showSlotsModal, setShowSlotsModal] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const isArabic = lang === "ar";
@@ -129,10 +130,10 @@ export default function EmployerApplicationDetail() {
             </div>
           </div>
           <div className="flex-1 min-h-0">
-            {firebaseUser ? (
+            {user ? (
               <MessageThread
                 applicationId={applicationId}
-                currentUser={firebaseUser}
+                currentUser={user}
                 senderRole="employer_owner"
               />
             ) : (
@@ -182,8 +183,8 @@ export default function EmployerApplicationDetail() {
                     </Badge>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {application.applied_at?.toDate
-                      ? new Date(application.applied_at.toDate()).toLocaleDateString(isArabic ? "ar-SA" : "en-GB", { dateStyle: "medium" })
+                    {application.applied_at
+                      ? new Date(application.applied_at).toLocaleDateString(isArabic ? "ar-SA" : "en-GB", { dateStyle: "medium" })
                       : ""}
                   </span>
                 </div>
@@ -261,7 +262,7 @@ export default function EmployerApplicationDetail() {
                   <div>
                     <span className="text-muted-foreground">{isArabic ? "تاريخ التقديم:" : "Applied:"}</span>
                     <div className="font-medium">
-                      {new Date(application.applied_at.toDate()).toLocaleDateString(isArabic ? "ar-SA" : "en-GB", { dateStyle: "medium" })}
+                      {new Date(application.applied_at).toLocaleDateString(isArabic ? "ar-SA" : "en-GB", { dateStyle: "medium" })}
                     </div>
                   </div>
                 )}
@@ -274,7 +275,7 @@ export default function EmployerApplicationDetail() {
       {showSlotsModal && application && (
         <ProposeInterviewSlotsModal
           application={application}
-          employerEmail={firebaseUser?.email}
+          employerEmail={user?.email}
           organizationId={application.organization_id}
           organizationName={application.organization_name}
           onClose={() => setShowSlotsModal(false)}

@@ -1,29 +1,26 @@
 import { Coffee, ChefHat, Utensils, Calculator, Smile, Sparkles, Soup, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/supabaseAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 
-const categoryIcons = [Coffee, ChefHat, Utensils, Calculator, Smile, Sparkles, Soup, Crown];
-const categoryCounts = [340, 280, 520, 190, 150, 210, 310, 120];
-const categoryKeys = ["barista", "chef", "waiter", "cashier", "host", "cleaner", "kitchen_helper", "restaurant_manager"];
+const categoryData = [
+  { key: "barista",    i18nKey: "barista",       icon: Coffee,     count: 340 },
+  { key: "chef",       i18nKey: "chef",          icon: ChefHat,    count: 280 },
+  { key: "waiter",     i18nKey: "waiter",        icon: Utensils,   count: 520 },
+  { key: "cashier",    i18nKey: "cashier",       icon: Calculator, count: 190 },
+  { key: "host",       i18nKey: "host",          icon: Smile,      count: 150 },
+  { key: "cleaner",    i18nKey: "cleaner",       icon: Sparkles,   count: 210 },
+  { key: "kitchen_helper",      i18nKey: "kitchenHelper", icon: Soup,   count: 310 },
+  { key: "restaurant_manager",  i18nKey: "manager",       icon: Crown,  count: 120 },
+];
 
 export default function JobCategories() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { userProfile } = useAuth();
-  const isCandidate = userProfile?.role === "candidate";
 
-  const handleCategoryClick = (key) => {
-    if (isCandidate) {
-      navigate(`/jobs?category=${key}`);
-    }
+  const handleCategoryClick = (jobTypeKey) => {
+    // Navigate to jobs page with category filter for all users
+    navigate(`/jobs?type=${jobTypeKey}`);
   };
-
-  const categories = categoryKeys.map((key, i) => ({
-    icon: categoryIcons[i],
-    label: t("categories", key),
-    count: categoryCounts[i],
-  }));
 
   return (
     <section className="py-20 sm:py-28 bg-secondary/30">
@@ -38,16 +35,16 @@ export default function JobCategories() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {categories.map((cat, i) => {
+          {categoryData.map((cat) => {
             const Icon = cat.icon;
             return (
               <div
-                key={i}
-                onClick={() => handleCategoryClick(categoryKeys[i])}
-                className={`group bg-white rounded-xl p-6 border border-border hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5 transition-all ${isCandidate ? "cursor-pointer" : "cursor-default"}`}
+                key={cat.key}
+                onClick={() => handleCategoryClick(cat.key)}
+                className="group card-premium hover-lift rounded-xl p-6 cursor-pointer"
               >
                 <Icon className="w-8 h-8 text-primary mb-4 group-hover:text-accent transition-colors" />
-                <h3 className="font-semibold text-sm">{cat.label}</h3>
+                <h3 className="font-semibold text-sm">{t("categories", cat.i18nKey)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{cat.count} {t("categories", "openPositions")}</p>
               </div>
             );

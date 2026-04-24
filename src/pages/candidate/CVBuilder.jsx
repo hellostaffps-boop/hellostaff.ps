@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Plus, Trash2, Download, Eye, EyeOff, Loader2,
@@ -11,9 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getCandidateProfile } from "@/lib/firestoreService";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getCandidateProfile } from "@/lib/supabaseService";
+import { useLanguage } from "@/hooks/useLanguage";
+
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 8);
@@ -57,13 +58,13 @@ function Section({ icon: Icon, title, children, onAdd, addLabel }) {
 }
 
 // ── CV Preview ────────────────────────────────────────────────────────────────
-function CVPreview({ cv }) {
+function CVPreview({ cv, t, isAr }) {
   const { personalInfo, summary, experience, education, skills, languages } = cv;
   return (
-    <div id="cv-preview" className="bg-white text-foreground font-inter p-8 min-h-[800px] text-sm leading-relaxed">
+    <div id="cv-preview" className="bg-white text-foreground font-inter p-8 min-h-[800px] text-sm leading-relaxed" dir={isAr ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="border-b-2 border-primary pb-5 mb-5">
-        <h1 className="text-2xl font-bold tracking-tight">{personalInfo.fullName || "Your Name"}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{personalInfo.fullName || (isAr ? "اسمك" : "Your Name")}</h1>
         {personalInfo.jobTitle && <p className="text-accent font-medium mt-0.5">{personalInfo.jobTitle}</p>}
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
           {personalInfo.email && <span>{personalInfo.email}</span>}
@@ -77,7 +78,7 @@ function CVPreview({ cv }) {
       {/* Summary */}
       {summary && (
         <div className="mb-5">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Professional Summary</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-2 border-b pb-1">{t("cvBuilder", "summary")}</h2>
           <p className="text-muted-foreground text-xs leading-relaxed">{summary}</p>
         </div>
       )}
@@ -85,17 +86,17 @@ function CVPreview({ cv }) {
       {/* Experience */}
       {experience.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Experience</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-3 border-b pb-1">{t("cvBuilder", "experience")}</h2>
           <div className="space-y-4">
             {experience.map((exp) => (
               <div key={exp.id}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-semibold">{exp.jobTitle || "Job Title"}</p>
+                    <p className="font-semibold">{exp.jobTitle || (isAr ? "المسمى الوظيفي" : "Job Title")}</p>
                     <p className="text-accent text-xs">{exp.company}{exp.location ? ` · ${exp.location}` : ""}</p>
                   </div>
                   <span className="text-xs text-muted-foreground shrink-0 ms-4">
-                    {exp.startDate}{exp.startDate && exp.endDate ? " – " : ""}{exp.endDate || (exp.current ? "Present" : "")}
+                    {exp.startDate}{exp.startDate && exp.endDate ? " – " : ""}{exp.endDate || (exp.current ? (isAr ? "الحالي" : "Present") : "")}
                   </span>
                 </div>
                 {exp.description && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{exp.description}</p>}
@@ -108,12 +109,12 @@ function CVPreview({ cv }) {
       {/* Education */}
       {education.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Education</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-3 border-b pb-1">{t("cvBuilder", "education")}</h2>
           <div className="space-y-3">
             {education.map((edu) => (
               <div key={edu.id} className="flex justify-between items-start">
                 <div>
-                  <p className="font-semibold">{edu.degree || "Degree"}</p>
+                  <p className="font-semibold">{edu.degree || (isAr ? "الدرجة العلمية" : "Degree")}</p>
                   <p className="text-xs text-muted-foreground">{edu.school}{edu.field ? ` · ${edu.field}` : ""}</p>
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0 ms-4">{edu.year}</span>
@@ -127,7 +128,7 @@ function CVPreview({ cv }) {
       <div className="grid grid-cols-2 gap-5">
         {skills.length > 0 && (
           <div>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Skills</h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-2 border-b pb-1">{t("cvBuilder", "skills")}</h2>
             <div className="flex flex-wrap gap-1.5">
               {skills.map((s, i) => (
                 <span key={i} className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full">{s}</span>
@@ -137,12 +138,12 @@ function CVPreview({ cv }) {
         )}
         {languages.length > 0 && (
           <div>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Languages</h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-2 border-b pb-1">{t("cvBuilder", "languages")}</h2>
             <div className="space-y-1">
               {languages.map((l, i) => (
                 <div key={i} className="flex justify-between text-xs">
                   <span>{l.language}</span>
-                  <span className="text-muted-foreground">{l.level}</span>
+                  <span className="text-muted-foreground">{t("cvBuilder", l.level.toLowerCase()) || l.level}</span>
                 </div>
               ))}
             </div>
@@ -155,7 +156,10 @@ function CVPreview({ cv }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CVBuilder() {
-  const { firebaseUser, userProfile } = useFirebaseAuth();
+  const { user, userProfile } = useAuth();
+  const { t, lang, isRTL } = useLanguage();
+  const isAr = lang === "ar";
+  
   const [cv, setCv] = useState(null);
   const [preview, setPreview] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -164,15 +168,15 @@ export default function CVBuilder() {
 
   // Pre-fill from candidate profile
   useQuery({
-    queryKey: ["cv-prefill", firebaseUser?.email],
+    queryKey: ["cv-prefill", user?.email],
     queryFn: async () => {
-      const profile = await getCandidateProfile(firebaseUser.email);
+      const profile = await getCandidateProfile(user.email);
       setCv({
         ...EMPTY_CV,
         personalInfo: {
           ...EMPTY_CV.personalInfo,
           fullName: userProfile?.full_name || "",
-          email: firebaseUser.email || "",
+          email: user?.email || "",
           phone: profile?.phone || "",
           location: profile?.location || "",
           jobTitle: profile?.headline || "",
@@ -182,7 +186,7 @@ export default function CVBuilder() {
       });
       return profile;
     },
-    enabled: !!firebaseUser && !cv,
+    enabled: !!user && !cv,
   });
 
   if (!cv) {
@@ -229,8 +233,9 @@ export default function CVBuilder() {
     setExporting(true);
     try {
       const htmlContent = document.getElementById("cv-preview")?.innerHTML || "";
+      const direction = isAr ? "rtl" : "ltr";
       const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-        body{font-family:Arial,sans-serif;margin:0;padding:32px;color:#1a1a1a;font-size:13px;}
+        body{font-family:Arial,sans-serif;margin:0;padding:32px;color:#1a1a1a;font-size:13px;direction:${direction};}
         h1{margin:0 0 4px;font-size:22px;} h2{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#1e3a5f;margin:0 0 8px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;}
         .accent{color:#f59e0b;} .muted{color:#6b7280;} .section{margin-bottom:20px;}
         .flex-between{display:flex;justify-content:space-between;}
@@ -243,47 +248,47 @@ export default function CVBuilder() {
       a.download = `${cv.personalInfo.fullName || "CV"}_Resume.html`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("CV downloaded! Open the file in a browser and print as PDF.");
+      toast.success(isAr ? "تم تحميل السيرة الذاتية! افتح الملف في المتصفح وقم بطباعته كـ PDF." : "CV downloaded! Open the file in a browser and print as PDF.");
     } catch {
-      toast.error("Export failed. Please try again.");
+      toast.error(isAr ? "فشل التصدير. يرجى المحاولة مرة أخرى." : "Export failed. Please try again.");
     }
     setExporting(false);
   };
 
   return (
-    <div>
+    <div dir={isRTL ? "rtl" : "ltr"}>
       <PageHeader
-        title="CV Builder"
-        description="Build a professional CV to attach with your applications"
+        title={t("cvBuilder", "title")}
+        description={t("cvBuilder", "description")}
       >
         <Button variant="outline" size="sm" className="gap-2" onClick={() => setPreview((p) => !p)}>
           {preview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          {preview ? "Edit" : "Preview"}
+          {preview ? t("cvBuilder", "edit") : t("cvBuilder", "preview")}
         </Button>
         <Button size="sm" className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleExport} disabled={exporting}>
           {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          Download CV
+          {t("cvBuilder", "download")}
         </Button>
       </PageHeader>
 
       {preview ? (
         <div className="max-w-3xl mx-auto rounded-2xl overflow-hidden border border-border shadow-lg">
-          <CVPreview cv={cv} />
+          <CVPreview cv={cv} t={t} isAr={isAr} />
         </div>
       ) : (
         <div className="max-w-2xl space-y-4">
 
           {/* Personal Info */}
-          <Section icon={User} title="Personal Information">
+          <Section icon={User} title={t("cvBuilder", "personalInfo")}>
             <div className="grid sm:grid-cols-2 gap-3">
               {[
-                ["fullName", "Full Name *"],
-                ["jobTitle", "Job Title / Headline"],
-                ["email", "Email"],
-                ["phone", "Phone"],
-                ["location", "Location / City"],
-                ["website", "Website (optional)"],
-                ["linkedin", "LinkedIn URL (optional)"],
+                ["fullName", t("cvBuilder", "fullName")],
+                ["jobTitle", t("cvBuilder", "jobTitle")],
+                ["email", t("cvBuilder", "email")],
+                ["phone", t("cvBuilder", "phone")],
+                ["location", t("cvBuilder", "location")],
+                ["website", t("cvBuilder", "website")],
+                ["linkedin", t("cvBuilder", "linkedin")],
               ].map(([field, label]) => (
                 <div key={field} className={field === "linkedin" || field === "website" ? "sm:col-span-2" : ""}>
                   <Label className="text-xs mb-1 block">{label}</Label>
@@ -299,89 +304,88 @@ export default function CVBuilder() {
           </Section>
 
           {/* Summary */}
-          <Section icon={FileText} title="Professional Summary">
+          <Section icon={FileText} title={t("cvBuilder", "summary")}>
             <Textarea
               value={cv.summary}
               onChange={(e) => setTop("summary", e.target.value)}
               rows={4}
               className="resize-none text-sm"
-              placeholder="A brief professional summary that highlights your key strengths, experience, and what you bring to a team..."
+              placeholder={t("cvBuilder", "summaryPlaceholder")}
             />
-            <p className="text-xs text-muted-foreground">{cv.summary.length} / 500 characters recommended</p>
           </Section>
 
           {/* Experience */}
-          <Section icon={Briefcase} title="Work Experience" onAdd={addExp} addLabel="Add Experience">
+          <Section icon={Briefcase} title={t("cvBuilder", "experience")} onAdd={addExp} addLabel={t("cvBuilder", "addExperience")}>
             {cv.experience.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-3">No experience added yet. Click below to add.</p>
+              <p className="text-sm text-muted-foreground text-center py-3">{t("cvBuilder", "noExperience")}</p>
             )}
             {cv.experience.map((exp) => (
               <div key={exp.id} className="border border-border rounded-xl p-4 space-y-3 relative">
-                <button onClick={() => removeExp(exp.id)} className="absolute top-3 end-3 text-muted-foreground hover:text-destructive">
+                <button onClick={() => removeExp(exp.id)} className={`absolute top-3 ${isRTL ? 'left-3' : 'right-3'} text-muted-foreground hover:text-destructive`}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs mb-1 block">Job Title *</Label>
-                    <Input value={exp.jobTitle} onChange={(e) => updateExp(exp.id, "jobTitle", e.target.value)} className="h-8 text-sm" placeholder="e.g. Head Barista" />
+                    <Label className="text-xs mb-1 block">{t("cvBuilder", "jobTitleLabel")} *</Label>
+                    <Input value={exp.jobTitle} onChange={(e) => updateExp(exp.id, "jobTitle", e.target.value)} className="h-8 text-sm" />
                   </div>
                   <div>
-                    <Label className="text-xs mb-1 block">Company *</Label>
-                    <Input value={exp.company} onChange={(e) => updateExp(exp.id, "company", e.target.value)} className="h-8 text-sm" placeholder="Company name" />
+                    <Label className="text-xs mb-1 block">{t("cvBuilder", "companyLabel")} *</Label>
+                    <Input value={exp.company} onChange={(e) => updateExp(exp.id, "company", e.target.value)} className="h-8 text-sm" />
                   </div>
                   <div>
-                    <Label className="text-xs mb-1 block">Location</Label>
-                    <Input value={exp.location} onChange={(e) => updateExp(exp.id, "location", e.target.value)} className="h-8 text-sm" placeholder="City, Country" />
+                    <Label className="text-xs mb-1 block">{t("cvBuilder", "locationLabel")}</Label>
+                    <Input value={exp.location} onChange={(e) => updateExp(exp.id, "location", e.target.value)} className="h-8 text-sm" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label className="text-xs mb-1 block">Start Date</Label>
+                      <Label className="text-xs mb-1 block">{t("cvBuilder", "startDate")}</Label>
                       <Input value={exp.startDate} onChange={(e) => updateExp(exp.id, "startDate", e.target.value)} className="h-8 text-sm" placeholder="Jan 2022" />
                     </div>
                     <div>
-                      <Label className="text-xs mb-1 block">End Date</Label>
-                      <Input value={exp.endDate} onChange={(e) => updateExp(exp.id, "endDate", e.target.value)} className="h-8 text-sm" placeholder="Present" disabled={exp.current} />
+                      <Label className="text-xs mb-1 block">{t("cvBuilder", "endDate")}</Label>
+                      <Input value={exp.endDate} onChange={(e) => updateExp(exp.id, "endDate", e.target.value)} className="h-8 text-sm" placeholder={isAr ? "الحالي" : "Present"} disabled={exp.current} />
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id={`cur-${exp.id}`} checked={exp.current} onChange={(e) => updateExp(exp.id, "current", e.target.checked)} className="w-3.5 h-3.5" />
-                  <label htmlFor={`cur-${exp.id}`} className="text-xs text-muted-foreground">Currently working here</label>
+                  <label htmlFor={`cur-${exp.id}`} className="text-xs text-muted-foreground">{t("cvBuilder", "current")}</label>
                 </div>
                 <div>
-                  <Label className="text-xs mb-1 block">Description</Label>
-                  <Textarea value={exp.description} onChange={(e) => updateExp(exp.id, "description", e.target.value)} rows={3} className="resize-none text-sm" placeholder="Key responsibilities and achievements..." />
+                  <Label className="text-xs mb-1 block">{t("cvBuilder", "expDescription")}</Label>
+                  <Textarea value={exp.description} onChange={(e) => updateExp(exp.id, "description", e.target.value)} rows={3} className="resize-none text-sm" />
                 </div>
               </div>
             ))}
           </Section>
 
           {/* Education */}
-          <Section icon={GraduationCap} title="Education" onAdd={addEdu} addLabel="Add Education">
+          <Section icon={GraduationCap} title={t("cvBuilder", "education")} onAdd={addEdu} addLabel={t("cvBuilder", "addEducation")}>
             {cv.education.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-3">No education added yet.</p>
+              <p className="text-sm text-muted-foreground text-center py-3">{t("cvBuilder", "noEducation")}</p>
             )}
             {cv.education.map((edu) => (
               <div key={edu.id} className="border border-border rounded-xl p-4 space-y-3 relative">
-                <button onClick={() => removeEdu(edu.id)} className="absolute top-3 end-3 text-muted-foreground hover:text-destructive">
+                <button onClick={() => removeEdu(edu.id)} className={`absolute top-3 ${isRTL ? 'left-3' : 'right-3'} text-muted-foreground hover:text-destructive`}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs mb-1 block">Degree / Certificate *</Label>
-                    <Input value={edu.degree} onChange={(e) => updateEdu(edu.id, "degree", e.target.value)} className="h-8 text-sm" placeholder="e.g. Bachelor of Science" />
+                    <Label className="text-xs mb-1 block">{t("cvBuilder", "degree")} *</Label>
+                    <Input value={edu.degree} onChange={(e) => updateEdu(edu.id, "degree", e.target.value)} className="h-8 text-sm" />
                   </div>
                   <div>
-                    <Label className="text-xs mb-1 block">School / University *</Label>
-                    <Input value={edu.school} onChange={(e) => updateEdu(edu.id, "school", e.target.value)} className="h-8 text-sm" placeholder="Institution name" />
+                    <Label className="text-xs mb-1 block">{t("cvBuilder", "school")} *</Label>
+                    <Input value={edu.school} onChange={(e) => updateEdu(edu.id, "school", e.target.value)} className="h-8 text-sm" />
                   </div>
                   <div>
-                    <Label className="text-xs mb-1 block">Field of Study</Label>
-                    <Input value={edu.field} onChange={(e) => updateEdu(edu.id, "field", e.target.value)} className="h-8 text-sm" placeholder="e.g. Hospitality Management" />
+                    <Label className="text-xs mb-1 block">{t("cvBuilder", "field")}</Label>
+                    <Input value={edu.field} onChange={(e) => updateEdu(edu.id, "field", e.target.value)} className="h-8 text-sm" />
                   </div>
                   <div>
-                    <Label className="text-xs mb-1 block">Graduation Year</Label>
-                    <Input value={edu.year} onChange={(e) => updateEdu(edu.id, "year", e.target.value)} className="h-8 text-sm" placeholder="e.g. 2021" />
+                    <Label className="text-xs mb-1 block">{t("cvBuilder", "year")}</Label>
+                    <Input value={edu.year} onChange={(e) => updateEdu(edu.id, "year", e.target.value)} className="h-8 text-sm" placeholder="2021" />
                   </div>
                 </div>
               </div>
@@ -389,7 +393,7 @@ export default function CVBuilder() {
           </Section>
 
           {/* Skills */}
-          <Section icon={Wrench} title="Skills">
+          <Section icon={Wrench} title={t("cvBuilder", "skills")}>
             <div className="flex flex-wrap gap-2 min-h-8">
               {cv.skills.map((s) => (
                 <Badge key={s} variant="secondary" className="gap-1 text-xs pr-1.5">
@@ -404,21 +408,21 @@ export default function CVBuilder() {
                 onChange={(e) => setSkillInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
                 className="h-8 text-sm"
-                placeholder="Type a skill and press Enter..."
+                placeholder={t("cvBuilder", "skillPlaceholder")}
               />
-              <Button type="button" size="sm" variant="outline" onClick={addSkill} className="h-8 px-3 shrink-0">Add</Button>
+              <Button type="button" size="sm" variant="outline" onClick={addSkill} className="h-8 px-3 shrink-0">{t("cvBuilder", "add")}</Button>
             </div>
           </Section>
 
           {/* Languages */}
-          <Section icon={FileText} title="Languages">
+          <Section icon={FileText} title={t("cvBuilder", "languages")}>
             {cv.languages.length > 0 && (
               <div className="space-y-2">
                 {cv.languages.map((l, i) => (
                   <div key={i} className="flex items-center justify-between bg-secondary/40 px-3 py-2 rounded-lg">
                     <span className="text-sm font-medium">{l.language}</span>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">{l.level}</span>
+                      <span className="text-xs text-muted-foreground">{t("cvBuilder", l.level.toLowerCase()) || l.level}</span>
                       <button onClick={() => removeLang(i)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
@@ -426,17 +430,17 @@ export default function CVBuilder() {
               </div>
             )}
             <div className="flex gap-2">
-              <Input value={langInput.language} onChange={(e) => setLangInput((l) => ({ ...l, language: e.target.value }))} className="h-8 text-sm" placeholder="Language (e.g. Arabic)" />
+              <Input value={langInput.language} onChange={(e) => setLangInput((l) => ({ ...l, language: e.target.value }))} className="h-8 text-sm" placeholder={t("cvBuilder", "language")} />
               <select
                 value={langInput.level}
                 onChange={(e) => setLangInput((l) => ({ ...l, level: e.target.value }))}
                 className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
               >
                 {["Native", "Fluent", "Advanced", "Intermediate", "Basic"].map((lv) => (
-                  <option key={lv}>{lv}</option>
+                  <option key={lv} value={lv}>{t("cvBuilder", lv.toLowerCase())}</option>
                 ))}
               </select>
-              <Button type="button" size="sm" variant="outline" onClick={addLang} className="h-8 px-3 shrink-0">Add</Button>
+              <Button type="button" size="sm" variant="outline" onClick={addLang} className="h-8 px-3 shrink-0">{t("cvBuilder", "add")}</Button>
             </div>
           </Section>
 
@@ -444,10 +448,10 @@ export default function CVBuilder() {
           <div className="flex gap-3 pb-10">
             <Button className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleExport} disabled={exporting}>
               {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Download CV
+              {t("cvBuilder", "download")}
             </Button>
             <Button variant="outline" className="gap-2" onClick={() => setPreview(true)}>
-              <Eye className="w-4 h-4" /> Preview
+              <Eye className="w-4 h-4" /> {t("cvBuilder", "preview")}
             </Button>
           </div>
         </div>

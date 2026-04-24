@@ -7,13 +7,13 @@ import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getCandidateProfile } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getCandidateProfile } from "@/lib/supabaseService";
 import { getCandidateCompletion } from "@/lib/profileCompletion";
 
 export default function Profile() {
   const { t } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
 
   const typeLabels = {
     barista: t("jobCard", "typeBarista"),
@@ -34,9 +34,9 @@ export default function Profile() {
   };
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ["my-candidate-profile", firebaseUser?.uid],
-    queryFn: () => getCandidateProfile(firebaseUser.uid),
-    enabled: !!firebaseUser,
+    queryKey: ["my-candidate-profile", user?.email],
+    queryFn: () => getCandidateProfile(user.email),
+    enabled: !!user,
   });
 
   if (isLoading) {
@@ -90,7 +90,7 @@ export default function Profile() {
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
               {profile.city && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {profile.city}</span>}
               {profile.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {profile.phone}</span>}
-              <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {firebaseUser?.email}</span>
+              <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {user?.email}</span>
             </div>
             <div className="flex gap-4 mt-4 text-sm">
               {profile.years_experience != null && (

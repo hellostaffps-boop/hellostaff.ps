@@ -1,19 +1,30 @@
-import { base44 } from "@/api/base44Client";
+/**
+ * interviewSlotService.js — Supabase implementation.
+ * Uses interview_slots table.
+ */
+
+import { supabase } from "@/lib/supabaseClient";
+import { createNotification } from "@/lib/supabaseService";
 
 export const getInterviewSlot = async (applicationId) => {
-  const res = await base44.entities.InterviewSlot.filter({ application_id: applicationId });
-  return res?.[0] || null;
+  const { data, error } = await supabase
+    .from("interview_slots")
+    .select("*")
+    .eq("application_id", applicationId)
+    .single();
+  if (error && error.code !== "PGRST116") console.error("[getInterviewSlot]", error);
+  return data || null;
 };
 
 export const getInterviewSlotsForApplications = async (applicationIds) => {
   if (!applicationIds?.length) return {};
+  const { data, error } = await supabase
+    .from("interview_slots")
+    .select("*")
+    .in("application_id", applicationIds);
+  if (error) throw error;
   const map = {};
-  await Promise.all(
-    applicationIds.map(async (appId) => {
-      const slot = await getInterviewSlot(appId);
-      if (slot) map[appId] = slot;
-    })
-  );
+  (data || []).forEach((s) => { map[s.application_id] = s; });
   return map;
 };
 
@@ -23,7 +34,6 @@ export const proposeInterviewSlots = async ({
   proposedSlots, location, interviewType, notes
 }) => {
   const existing = await getInterviewSlot(applicationId);
-
   const payload = {
     application_id: applicationId,
     organization_id: organizationId,
@@ -38,87 +48,47 @@ export const proposeInterviewSlots = async ({
     interview_type: interviewType || "in_person",
     notes: notes || "",
     status: "pending_selection",
+    updated_at: new Date().toISOString(),
   };
 
   if (existing?.id) {
-    await base44.entities.InterviewSlot.update(existing.id, payload);
+    const { error } = await supabase.from("interview_slots").update(payload).eq("id", existing.id);
+    if (error) throw error;
   } else {
-    await base44.entities.InterviewSlot.create(payload);
+    const { error } = await supabase.from("interview_slots").insert(payload);
+    if (error) throw error;
   }
 
-  // Notify candidate in-app
   try {
-    await base44.entities.Notification.create({
-      user_email: candidateEmail,
+    await createNotification({
+      userEmail: candidateEmail,
       title: "دعوة لاختيار موعد مقابلة",
       message: `قدّم لك ${organizationName} مواعيد لاختيار موعد مقابلة وظيفة "${jobTitle}"`,
       type: "application",
       link: "/candidate/applications",
-      read: false,
-    });
-  } catch (_) {}
-
-  // Send email
-  try {
-    await base44.functions.invoke("sendInterviewEmail", {
-      type: "slots_proposed",
-      to: candidateEmail,
-      candidateName,
-      jobTitle,
-      organizationName,
-      slots: proposedSlots,
-      location,
-      interviewType,
-      notes,
     });
   } catch (_) {}
 };
 
 export const selectInterviewSlot = async (slotId, selectedSlot) => {
-  const slot = await base44.entities.InterviewSlot.filter({ id: slotId });
-  const s = slot?.[0];
-  if (!s) throw new Error("Slot not found");
+  const { data: s, error: findErr } = await supabase
+    .from("interview_slots").select("*").eq("id", slotId).single();
+  if (findErr || !s) throw new Error("Slot not found");
 
-  await base44.entities.InterviewSlot.update(slotId, {
+  const { error } = await supabase.from("interview_slots").update({
     selected_slot: selectedSlot,
     status: "confirmed",
-  });
+    updated_at: new Date().toISOString(),
+  }).eq("id", slotId);
+  if (error) throw error;
 
-  // Notify employer
   try {
-    await base44.entities.Notification.create({
-      user_email: s.employer_email,
+    await createNotification({
+      userEmail: s.employer_email,
       title: `${s.candidate_name} اختار موعد المقابلة`,
       message: `تم تحديد موعد مقابلة "${s.job_title}" في ${new Date(selectedSlot).toLocaleString("ar-SA")}`,
       type: "application",
       link: "/employer/applications",
-      read: false,
-    });
-  } catch (_) {}
-
-  // Emails to both
-  try {
-    await base44.functions.invoke("sendInterviewEmail", {
-      type: "slot_selected_employer",
-      to: s.employer_email,
-      candidateName: s.candidate_name,
-      employerName: s.organization_name,
-      jobTitle: s.job_title,
-      organizationName: s.organization_name,
-      selectedSlot,
-      location: s.location,
-      interviewType: s.interview_type,
-    });
-    await base44.functions.invoke("sendInterviewEmail", {
-      type: "slot_selected_candidate",
-      to: s.candidate_email,
-      candidateName: s.candidate_name,
-      jobTitle: s.job_title,
-      organizationName: s.organization_name,
-      selectedSlot,
-      location: s.location,
-      interviewType: s.interview_type,
-      notes: s.notes,
     });
   } catch (_) {}
 

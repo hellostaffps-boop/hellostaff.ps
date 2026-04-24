@@ -10,14 +10,16 @@ import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
 import AIJobAssistant from "../../components/AIJobAssistant";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getEmployerProfile, getOrganization, createJobForOwnedOrganization, notifyMatchingCandidatesForJob } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getEmployerProfile, getOrganization, createJobForOwnedOrganization, notifyMatchingCandidatesForJob } from "@/lib/supabaseService";
+import { canPublishJob, incrementJobsUsed } from "@/lib/subscriptionService";
+
 
 
 export default function PostJob() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     title: "", job_type: "barista", employment_type: "full_time",
@@ -26,9 +28,9 @@ export default function PostJob() {
   });
 
   const { data: employerProfile } = useQuery({
-    queryKey: ["employer-profile", firebaseUser?.uid],
-    queryFn: () => getEmployerProfile(firebaseUser.uid),
-    enabled: !!firebaseUser,
+    queryKey: ["employer-profile", user?.email],
+    queryFn: () => getEmployerProfile(user.email),
+    enabled: !!user,
   });
 
   const orgId = employerProfile?.organization_id;
@@ -58,9 +60,24 @@ export default function PostJob() {
   const handleSave = async (publish = false) => {
     if (!form.title) { toast.error(t("common", "required")); return; }
     if (!employerProfile?.organization_id) { toast.error("Organization not found"); return; }
+
+    // Check subscription before publishing
+    if (publish) {
+      const check = await canPublishJob(employerProfile.organization_id);
+      if (!check.allowed) {
+        if (check.reason === "no_subscription") {
+          toast.error(lang === "ar" ? "يجب الاشتراك أولاً لنشر الوظائف" : "You need an active subscription to publish jobs");
+        } else if (check.reason === "limit_reached") {
+          toast.error(lang === "ar" ? "وصلت للحد الأقصى من الوظائف في اشتراكك الحالي" : "You've reached your job posting limit");
+        }
+        navigate("/employer/pricing");
+        return;
+      }
+    }
+
     setSaving(true);
     const jobRef = await createJobForOwnedOrganization(
-      firebaseUser.uid,
+      user.email,
       {
         ...form,
         salary_min: form.salary_min ? Number(form.salary_min) : null,
@@ -70,8 +87,13 @@ export default function PostJob() {
       employerProfile.organization_id,
       org?.name || ""
     );
-    // Notify matching candidates when job is published
+
+    // Increment jobs used counter on the subscription
     if (publish) {
+      const check = await canPublishJob(employerProfile.organization_id);
+      if (check.subscription) {
+        await incrementJobsUsed(check.subscription.id).catch(() => {});
+      }
       notifyMatchingCandidatesForJob({
         id: jobRef.id,
         title: form.title,

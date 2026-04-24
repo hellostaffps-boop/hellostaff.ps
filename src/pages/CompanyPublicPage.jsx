@@ -1,14 +1,18 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import {
-  Globe, Phone, Mail, Instagram, Linkedin, MapPin, Calendar,
-  ShieldCheck, Briefcase, ArrowLeft, Users, ChevronRight
+import { Globe, Phone, Mail, Instagram, Linkedin, MapPin, Calendar,
+  ShieldCheck, Briefcase, ArrowLeft, Users, ChevronRight, Star
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { base44 } from "@/api/base44Client";
+import { getOrganization, getJobsByOrg } from "@/lib/supabaseService";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getCompanyReviews, getCompanyAverageRating } from "@/lib/reviewService";
+import { ReviewCard, AverageRatingBadge } from "@/components/ReviewCard";
+import ReviewForm from "@/components/ReviewForm";
+
 
 const INDUSTRY_LABELS = {
   cafe: "Café", restaurant: "Restaurant", bar: "Bar", hotel: "Hotel",
@@ -29,19 +33,32 @@ export default function CompanyPublicPage() {
   const { id } = useParams();
   const { lang } = useLanguage();
   const isAr = lang === "ar";
+  const { user, userProfile } = useAuth();
 
   const { data: org, isLoading } = useQuery({
     queryKey: ["public-org", id],
-    queryFn: () => base44.entities.Organization.filter({ id }),
-    select: (res) => res?.[0] || null,
+    queryFn: () => getOrganization(id),
     enabled: !!id,
   });
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["public-org-jobs", id],
-    queryFn: () => base44.entities.Job.filter({ organization_id: id, status: "published" }, "-created_date"),
+    queryFn: () => getJobsByOrg(id),
     enabled: !!id,
   });
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["company-reviews", id],
+    queryFn: () => getCompanyReviews(id),
+    enabled: !!id,
+  });
+
+  const { data: avgRating } = useQuery({
+    queryKey: ["company-avg-rating", id],
+    queryFn: () => getCompanyAverageRating(id),
+    enabled: !!id,
+  });
+
 
   usePageMeta(org ? {
     title: `${org.name} — ${INDUSTRY_LABELS[org.industry] || "Company"} Jobs`,
@@ -97,26 +114,29 @@ export default function CompanyPublicPage() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-10 pb-16">
         {/* Logo + Identity */}
-        <div className="bg-white rounded-2xl border border-border p-6 mb-4 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="w-20 h-20 rounded-xl border-2 border-white shadow-sm bg-secondary/20 overflow-hidden shrink-0 -mt-12 ring-4 ring-white">
+        <div className="bg-white rounded-2xl border border-border p-6 mb-4 shadow-sm relative mt-12 sm:mt-0 pt-14 sm:pt-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+            <div className="w-24 h-24 rounded-2xl border-4 border-white shadow-sm bg-white overflow-hidden shrink-0 absolute -top-12 left-1/2 -translate-x-1/2 sm:static sm:-mt-12 sm:transform-none z-10">
               {org.logo_url
                 ? <img src={org.logo_url} alt={org.name} className="w-full h-full object-contain p-1" />
-                : <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-muted-foreground">
+                : <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-muted-foreground bg-secondary/20">
                     {org.name?.[0]?.toUpperCase()}
                   </div>
               }
             </div>
-            <div className="flex-1 min-w-0 pt-2 sm:pt-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold truncate">{org.name}</h1>
+            <div className="flex-1 min-w-0 text-center sm:text-start w-full flex flex-col sm:block items-center">
+              <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 mb-1">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground leading-tight break-words">{org.name}</h1>
                 {org.verified && (
-                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-2 py-0.5 rounded-full font-medium">
-                    <ShieldCheck className="w-3 h-3" /> {isAr ? "موثق" : "Verified"}
+                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-2 py-0.5 rounded-full font-medium shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5" /> {isAr ? "موثق" : "Verified"}
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
+              {org.slogan && (
+                 <p className="text-sm font-medium italic text-muted-foreground mt-1 mb-2">{org.slogan}</p>
+              )}
+              <div className="flex flex-wrap justify-center sm:justify-start gap-3 mt-3 text-sm text-muted-foreground">
                 {org.industry && (
                   <span className="flex items-center gap-1">
                     <Briefcase className="w-3.5 h-3.5" />
@@ -307,7 +327,14 @@ export default function CompanyPublicPage() {
               {org.address && (
                 <div className="flex items-start gap-2 text-sm text-muted-foreground">
                   <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{org.address}{org.city && `, ${org.city}`}</span>
+                  <div className="flex flex-col gap-1">
+                    <span>{org.address}{org.city && `, ${org.city}`}</span>
+                    {org.map_url && (
+                       <a href={org.map_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline font-medium mt-1 inline-flex items-center gap-1">
+                         {isAr ? "عرض على الخريطة" : "View on Map"} <Globe className="w-3 h-3" />
+                       </a>
+                    )}
+                  </div>
                 </div>
               )}
               {org.size && (
@@ -321,6 +348,53 @@ export default function CompanyPublicPage() {
                   <Calendar className="w-4 h-4 shrink-0" />
                   <span>{isAr ? `تأسست عام ${org.founded_year}` : `Founded ${org.founded_year}`}</span>
                 </div>
+              )}
+            </div>
+
+            {/* Reviews Section */}
+            <div className="bg-white rounded-2xl border border-border p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-sm flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-400" />
+                  {isAr ? "التقييمات" : "Reviews"}
+                  {avgRating && <AverageRatingBadge rating={avgRating.overall} count={avgRating.count} />}
+                </h2>
+              </div>
+
+              {avgRating && (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="text-center bg-secondary/30 rounded-lg p-2">
+                    <p className="text-[10px] text-muted-foreground">{isAr ? "البيئة" : "Environment"}</p>
+                    <p className="text-sm font-bold text-amber-600">{avgRating.environment}</p>
+                  </div>
+                  <div className="text-center bg-secondary/30 rounded-lg p-2">
+                    <p className="text-[10px] text-muted-foreground">{isAr ? "الإدارة" : "Management"}</p>
+                    <p className="text-sm font-bold text-amber-600">{avgRating.management}</p>
+                  </div>
+                  <div className="text-center bg-secondary/30 rounded-lg p-2">
+                    <p className="text-[10px] text-muted-foreground">{isAr ? "الراتب" : "Salary"}</p>
+                    <p className="text-sm font-bold text-amber-600">{avgRating.salary}</p>
+                  </div>
+                </div>
+              )}
+
+              {reviews.length > 0 ? (
+                <div className="space-y-3 mb-4">
+                  {reviews.slice(0, 5).map(r => <ReviewCard key={r.id} review={r} isAr={isAr} type="company" />)}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {isAr ? "لا توجد تقييمات بعد. كن أول من يقيّم!" : "No reviews yet. Be the first to review!"}
+                </p>
+              )}
+
+              {user && userProfile?.role === "candidate" && (
+                <ReviewForm
+                  type="company"
+                  targetId={id}
+                  reviewer={{ email: user.email, name: userProfile.full_name }}
+                  isAr={isAr}
+                />
               )}
             </div>
           </div>

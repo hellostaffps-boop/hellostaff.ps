@@ -1,19 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
-import { base44 } from '@/api/base44Client';
-import {
-  updateLastActivity, getAdminToken, getAdminSession,
-  clearAdminSession, getSessionExpirationStatus
-} from '@/lib/adminSessionManager';
+import { useAuth } from '@/lib/supabaseAuth';
+import { getAdminDashboardDataSafe, getAuditLogsSafe } from '@/lib/adminService';
 import {
   Users, Building2, Briefcase, FileText, AlertCircle,
-  CheckCircle, Clock, LogOut, RefreshCw, ChevronRight,
-  ShieldAlert, BarChart3, Settings, Flag
+  CheckCircle, LogOut, RefreshCw, ChevronRight, BarChart3, Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-const TIMEOUT_MINUTES = 30;
 
 function StatCard({ icon: Icon, label, value, sub, color = 'primary', loading }) {
   return (
@@ -50,75 +44,46 @@ const ACTION_CARDS = (ar) => [
   { label: ar ? 'إدارة المستخدمين' : 'Manage Users', icon: Users, path: '/admin/users', color: 'blue' },
   { label: ar ? 'إدارة المنظمات' : 'Organizations', icon: Building2, path: '/admin/organizations', color: 'green' },
   { label: ar ? 'إشراف الوظائف' : 'Jobs & Applications', icon: Briefcase, path: '/admin/jobs', color: 'amber' },
+  { label: ar ? 'رسالة جماعية' : 'Broadcast', icon: Send, path: '/admin/broadcast', color: 'blue' },
   { label: ar ? 'سجل الأحداث' : 'Audit Logs', icon: BarChart3, path: '/admin/audit', color: 'default' },
 ];
-
-const ACTION_LABEL = {
-  admin_password_validation_success: { ar: 'دخول ناجح', en: 'Login Success' },
-  admin_password_validation_failure: { ar: 'محاولة دخول فاشلة', en: 'Failed Login' },
-  admin_dashboard_access: { ar: 'دخول لوحة التحكم', en: 'Dashboard Access' },
-  admin_bootstrap_role_assigned: { ar: 'تعيين دور المشرف', en: 'Admin Role Assigned' },
-};
 
 export default function AdminDashboard() {
   const { lang } = useLanguage();
   const navigate = useNavigate();
+  const { userProfile, logout } = useAuth();
   const ar = lang === 'ar';
 
   const [metrics, setMetrics] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(true);
-  const [sessionInfo, setSessionInfo] = useState({ remaining: TIMEOUT_MINUTES, warning: false });
-  const [now, setNow] = useState(Date.now());
-
-  // Activity tracking
-  useEffect(() => {
-    const handle = () => updateLastActivity();
-    window.addEventListener('click', handle);
-    window.addEventListener('keydown', handle);
-    return () => { window.removeEventListener('click', handle); window.removeEventListener('keydown', handle); };
-  }, []);
-
-  // Session countdown
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-      const exp = getSessionExpirationStatus(TIMEOUT_MINUTES);
-      if (exp.expired) { handleLogout(); return; }
-      const remaining = Math.max(0, TIMEOUT_MINUTES - (exp.elapsed_minutes || 0));
-      setSessionInfo({ remaining, warning: remaining <= 5 });
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   const loadData = useCallback(async () => {
-    const token = getAdminToken();
+    if (!userProfile) return;
     setMetricsLoading(true);
     setAuditLoading(true);
     try {
-      const [mRes, aRes] = await Promise.all([
-        base44.functions.invoke('getAdminMetrics', { session_token: token }),
-        base44.functions.invoke('getAuditLogs', { session_token: token }),
+      const [metricsData, logsData] = await Promise.all([
+        getAdminDashboardDataSafe(userProfile),
+        getAuditLogsSafe(userProfile, 20),
       ]);
-      setMetrics(mRes.data);
-      setAuditLogs(aRes.data?.logs || []);
+      setMetrics(metricsData);
+      setAuditLogs(logsData);
     } catch (e) {
-      console.error(e);
+      console.error('[AdminDashboard]', e);
     } finally {
       setMetricsLoading(false);
       setAuditLoading(false);
     }
-  }, []);
+  }, [userProfile]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleLogout = () => {
-    clearAdminSession();
+  const handleLogout = async () => {
+    await logout();
     navigate('/admin');
   };
-
-  const session = getAdminSession();
 
   return (
     <div className={ar ? 'rtl' : 'ltr'}>
@@ -127,6 +92,12 @@ export default function AdminDashboard() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">{ar ? 'لوحة تحكم المشرف' : 'Super Admin Dashboard'}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{ar ? 'مركز إدارة المنصة' : 'Platform command center'}</p>
+          {userProfile?.email && (
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              {userProfile.email}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={loadData} className="gap-1.5">
@@ -135,28 +106,21 @@ export default function AdminDashboard() {
           </Button>
           <Button variant="destructive" size="sm" onClick={handleLogout} className="gap-1.5">
             <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{ar ? 'إنهاء الجلسة' : 'End Session'}</span>
+            <span className="hidden sm:inline">{ar ? 'تسجيل خروج' : 'Sign Out'}</span>
           </Button>
         </div>
       </div>
 
       {/* Main stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <StatCard icon={Users} label={ar ? 'إجمالي المستخدمين' : 'Total Users'} value={metrics?.totalUsers} loading={metricsLoading} color="blue" sub={metrics ? `${metrics.totalCandidates ?? 0} ${ar ? 'مرشح' : 'candidates'} · ${metrics.totalEmployers ?? 0} ${ar ? 'صاحب عمل' : 'employers'}` : null} />
-        <StatCard icon={Building2} label={ar ? 'المنظمات' : 'Organizations'} value={metrics?.totalOrganizations} loading={metricsLoading} color="green" sub={metrics ? `${metrics.verifiedOrganizations ?? 0} ${ar ? 'موثقة' : 'verified'}` : null} />
-        <StatCard icon={Briefcase} label={ar ? 'الوظائف' : 'Jobs'} value={metrics?.totalJobs} loading={metricsLoading} color="amber" sub={metrics ? `${metrics.publishedJobs ?? 0} ${ar ? 'منشورة' : 'published'}` : null} />
-        <StatCard icon={FileText} label={ar ? 'الطلبات' : 'Applications'} value={metrics?.totalApplications} loading={metricsLoading} sub={metrics ? `${metrics.pendingApplications ?? 0} ${ar ? 'معلقة' : 'pending'}` : null} />
+        <StatCard icon={Users} label={ar ? 'إجمالي المستخدمين' : 'Total Users'} value={metrics?.totalUsers} loading={metricsLoading} color="blue"
+          sub={metrics ? `${metrics.totalCandidates ?? 0} ${ar ? 'مرشح' : 'candidates'} · ${metrics.totalEmployers ?? 0} ${ar ? 'صاحب عمل' : 'employers'}` : null} />
+        <StatCard icon={Building2} label={ar ? 'المنظمات' : 'Organizations'} value={metrics?.totalOrganizations} loading={metricsLoading} color="green"
+          sub={metrics ? `${metrics.activeOrganizations ?? 0} ${ar ? 'نشطة' : 'active'}` : null} />
+        <StatCard icon={Briefcase} label={ar ? 'الوظائف' : 'Jobs'} value={metrics?.totalJobs} loading={metricsLoading} color="amber"
+          sub={metrics ? `${metrics.publishedJobs ?? 0} ${ar ? 'منشورة' : 'published'}` : null} />
+        <StatCard icon={FileText} label={ar ? 'الطلبات' : 'Applications'} value={metrics?.totalApplications} loading={metricsLoading} />
       </div>
-
-      {/* Secondary stats row */}
-      {metrics && !metricsLoading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <StatCard icon={Users} label={ar ? 'المرشحون النشطون' : 'Candidates'} value={metrics.totalCandidates} color="blue" />
-          <StatCard icon={Building2} label={ar ? 'منظمات معلقة' : 'Pending Orgs'} value={metrics.pendingOrganizations} color={metrics.pendingOrganizations > 0 ? 'amber' : 'default'} />
-          <StatCard icon={Briefcase} label={ar ? 'وظائف مسودة' : 'Draft Jobs'} value={metrics.draftJobs} />
-          <StatCard icon={Briefcase} label={ar ? 'وظائف مغلقة' : 'Closed Jobs'} value={metrics.closedJobs} />
-        </div>
-      )}
 
       <div className="grid lg:grid-cols-3 gap-4 mb-6">
         {/* Action cards */}
@@ -183,39 +147,26 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Session panel */}
-        <div className={`bg-card rounded-xl border p-4 ${sessionInfo.warning ? 'border-amber-300 bg-amber-50/30' : 'border-border'}`}>
+        {/* Admin info */}
+        <div className="bg-card rounded-xl border border-border p-4">
           <h2 className="font-semibold text-sm mb-3 flex items-center gap-2">
-            {sessionInfo.warning
-              ? <ShieldAlert className="w-4 h-4 text-amber-500" />
-              : <CheckCircle className="w-4 h-4 text-green-500" />}
-            {ar ? 'الجلسة الحالية' : 'Current Session'}
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            {ar ? 'معلومات الحساب' : 'Account Info'}
           </h2>
           <div className="space-y-2.5 text-sm">
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">{ar ? 'الحالة' : 'Status'}</span>
-              <span className={`font-medium text-xs px-2 py-0.5 rounded-full ${sessionInfo.warning ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                {sessionInfo.warning ? (ar ? 'تحذير' : 'Warning') : (ar ? 'نشط' : 'Active')}
+              <span className="text-muted-foreground">{ar ? 'الدور' : 'Role'}</span>
+              <span className="font-medium text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                platform_admin
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{ar ? 'الوقت المتبقي' : 'Remaining'}</span>
-              <span className={`font-bold ${sessionInfo.warning ? 'text-amber-600' : ''}`}>{sessionInfo.remaining}{ar ? ' د' : 'm'}</span>
+              <span className="text-muted-foreground">{ar ? 'الحالة' : 'Status'}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">{ar ? 'نشط' : 'Active'}</span>
             </div>
-            {session?.started_at && (
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">{ar ? 'بدأت' : 'Started'}</span>
-                <span className="text-xs">{new Date(session.started_at).toLocaleTimeString(ar ? 'ar-SA' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            )}
-            {sessionInfo.warning && (
-              <div className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mt-1">
-                {ar ? 'ستنتهي الجلسة قريباً. تفاعل مع الصفحة لتجديدها.' : 'Session expiring soon. Interact to renew.'}
-              </div>
-            )}
             <Button variant="outline" size="sm" className="w-full mt-1 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60" onClick={handleLogout}>
               <LogOut className="w-3.5 h-3.5 me-1.5" />
-              {ar ? 'إنهاء الجلسة' : 'End Session'}
+              {ar ? 'تسجيل خروج' : 'Sign Out'}
             </Button>
           </div>
         </div>
@@ -238,17 +189,16 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="space-y-1.5 max-h-80 overflow-y-auto">
-            {auditLogs.slice(0, 20).map((log) => {
-              const label = ACTION_LABEL[log.action];
-              const isFailure = log.status === 'failure';
+            {auditLogs.map((log) => {
+              const isFailure = log.status === 'failed';
               return (
                 <div key={log.id} className={`flex items-start gap-3 p-2.5 rounded-lg text-xs ${isFailure ? 'bg-red-50 border border-red-100' : 'bg-secondary/30 border border-border/40'}`}>
                   <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${isFailure ? 'bg-red-500' : 'bg-green-500'}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium">{label ? label[ar ? 'ar' : 'en'] : log.action}</div>
+                    <div className="font-medium">{log.action}</div>
                     <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
                       {log.actor_email && <span>{log.actor_email}</span>}
-                      <span>{new Date(log.created_date).toLocaleString(ar ? 'ar-SA' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      <span>{new Date(log.created_at).toLocaleString(ar ? 'ar-SA' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</span>
                     </div>
                   </div>
                   <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${isFailure ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>

@@ -6,23 +6,23 @@ import { Badge } from "@/components/ui/badge";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 import { getSavedJobs, unsaveJob } from "@/lib/savedJobsService";
 import { toast } from "sonner";
 
 export default function SavedJobs() {
   const { t } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: savedJobs = [], isLoading } = useQuery({
-    queryKey: ["saved-jobs", firebaseUser?.uid],
-    queryFn: () => getSavedJobs(firebaseUser.uid),
-    enabled: !!firebaseUser,
+    queryKey: ["saved-jobs", user?.email],
+    queryFn: () => getSavedJobs(user.email),
+    enabled: !!user,
   });
 
-  const handleUnsave = async (uid, jobId, jobTitle) => {
-    await unsaveJob(uid, jobId);
+  const handleUnsave = async (userEmail, jobId, jobTitle) => {
+    await unsaveJob(userEmail, jobId);
     queryClient.invalidateQueries({ queryKey: ["saved-jobs"] });
     toast.success(t("savedJobs", "unsaved"));
   };
@@ -83,7 +83,7 @@ export default function SavedJobs() {
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
                   {t("savedJobs", "savedOn")}{" "}
-                  {saved.created_at?.toDate ? saved.created_at.toDate().toLocaleDateString() : ""}
+                  {saved.created_at ? new Date(saved.created_at).toLocaleDateString() : ""}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -97,7 +97,7 @@ export default function SavedJobs() {
                   size="sm"
                   variant="ghost"
                   className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleUnsave(firebaseUser.uid, saved.job_id, saved.job_title)}
+                  onClick={() => handleUnsave(user.email, saved.job_id, saved.job_title)}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>

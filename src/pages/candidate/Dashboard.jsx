@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, FileText, Star, CheckCircle2, Bookmark, ArrowRight } from "lucide-react";
+import { Briefcase, FileText, Star, Bookmark, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import StatsCard from "../../components/StatsCard";
 import PageHeader from "../../components/PageHeader";
@@ -7,8 +7,9 @@ import JobCard from "../../components/JobCard";
 import EmptyState from "../../components/EmptyState";
 import ProfileCompletionCard from "../../components/ProfileCompletionCard";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getApplicationsByCandidate, getPublishedJobs, getCandidateProfile } from "@/lib/firestoreService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getApplicationsByCandidate, getPublishedJobs, getCandidateProfile } from "@/lib/supabaseService";
+
 import { getSavedJobs } from "@/lib/savedJobsService";
 import { getCandidateCompletion } from "@/lib/profileCompletion";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
@@ -36,12 +37,12 @@ function StatusBadge({ status }) {
 
 export default function Dashboard() {
   const { t } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
 
   const { data: applications = [] } = useQuery({
-    queryKey: ["my-applications", firebaseUser?.email],
-    queryFn: () => getApplicationsByCandidate(firebaseUser.email),
-    enabled: !!firebaseUser,
+    queryKey: ["my-applications", user?.email],
+    queryFn: () => getApplicationsByCandidate(user.email),
+    enabled: !!user,
   });
 
   const { data: jobs = [] } = useQuery({
@@ -50,15 +51,15 @@ export default function Dashboard() {
   });
 
   const { data: candidateProfile } = useQuery({
-    queryKey: ["my-candidate-profile", firebaseUser?.email],
-    queryFn: () => getCandidateProfile(firebaseUser.email),
-    enabled: !!firebaseUser,
+    queryKey: ["my-candidate-profile", user?.email],
+    queryFn: () => getCandidateProfile(user.email),
+    enabled: !!user,
   });
 
   const { data: savedJobDocs = [] } = useQuery({
-    queryKey: ["saved-jobs", firebaseUser?.email],
-    queryFn: () => getSavedJobs(firebaseUser.email),
-    enabled: !!firebaseUser,
+    queryKey: ["saved-jobs", user?.email],
+    queryFn: () => getSavedJobs(user.email),
+    enabled: !!user,
   });
 
   const { savedJobIds, toggleSave } = useSavedJobs();

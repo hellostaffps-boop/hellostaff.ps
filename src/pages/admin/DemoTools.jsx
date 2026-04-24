@@ -1,109 +1,67 @@
-import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
-import { getAdminToken } from "@/lib/adminSessionManager";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Database, Trash2, RefreshCw, CheckCircle2, XCircle, Loader2, FlaskConical } from "lucide-react";
+import { AlertTriangle, Database, Trash2, FlaskConical, CheckCircle2, Loader2, RefreshCw, Users, Briefcase, FileText, Building2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/lib/supabaseAuth";
+import { seedDemoData, clearDemoData, getDemoDataStatus } from "@/lib/adminService";
+import { toast } from "sonner";
 
-const COLLECTIONS_AR = {
-  users: "المستخدمون",
-  candidate_profiles: "ملفات المرشحين",
-  employer_profiles: "ملفات أصحاب العمل",
-  organizations: "المؤسسات",
-  organization_members: "أعضاء المؤسسات",
-  jobs: "الوظائف",
-  applications: "الطلبات",
-  application_notes: "الملاحظات الداخلية",
-  application_evaluations: "التقييمات",
-  notifications: "الإشعارات",
-};
-
-function StatusRow({ label, count }) {
+function StatBadge({ icon: Icon, label, count, color = "bg-blue-50 text-blue-700 border-blue-200" }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <Badge variant={count > 0 ? "default" : "secondary"} className="min-w-[2rem] justify-center">
-        {count}
-      </Badge>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${color}`}>
+      <Icon className="w-4 h-4 shrink-0" />
+      <span>{label}</span>
+      <span className="ms-auto font-bold">{count}</span>
     </div>
   );
 }
 
 export default function DemoTools() {
   const { lang } = useLanguage();
+  const { userProfile } = useAuth();
+  const queryClient = useQueryClient();
   const isAr = lang === "ar";
-  const token = getAdminToken();
-
-  const [status, setStatus] = useState(null);
-  const [loadingStatus, setLoadingStatus] = useState(true);
-  const [seeding, setSeeding] = useState(false);
-  const [clearing, setClearing] = useState(false);
-  const [message, setMessage] = useState(null); // { type: 'success'|'error'|'warn', text }
   const [confirmClear, setConfirmClear] = useState(false);
-  const [confirmForce, setConfirmForce] = useState(false);
 
-  const fetchStatus = async () => {
-    setLoadingStatus(true);
-    setMessage(null);
-    try {
-      const res = await base44.functions.invoke("getDemoStatus", { session_token: token });
-      if (res.data?.error) {
-        setMessage({ type: "error", text: isAr ? `خطأ في جلب الحالة: ${res.data.error}` : `Status fetch error: ${res.data.error}` });
-      } else {
-        setStatus(res.data);
-      }
-    } catch (e) {
-      setMessage({ type: "error", text: isAr ? `خطأ في جلب الحالة: ${e.message}` : `Status fetch error: ${e.message}` });
-    } finally {
-      setLoadingStatus(false);
-    }
-  };
+  const { data: status, isLoading: statusLoading } = useQuery({
+    queryKey: ["demo-data-status"],
+    queryFn: () => getDemoDataStatus(userProfile),
+    enabled: !!userProfile,
+  });
 
-  useEffect(() => { fetchStatus(); }, []);
+  const hasDemoData = (status?.total || 0) > 0;
 
-  const handleSeed = async (force = false) => {
-    setSeeding(true);
-    setMessage(null);
-    setConfirmForce(false);
-    try {
-      const res = await base44.functions.invoke("seedDemoData", { session_token: token, force });
-      const d = res.data;
-      if (d.error === "DEMO_EXISTS" || d.existing_batch_id) {
-        setConfirmForce(true);
-        setMessage({ type: "warn", text: isAr ? `توجد بيانات تجريبية بالفعل (${d.existing_batch_id}). هل تريد إنشاء دفعة جديدة؟` : `Demo data already exists (${d.existing_batch_id}). Create a new batch anyway?` });
-      } else if (d.success) {
-        setMessage({ type: "success", text: isAr ? `✓ تم إنشاء البيانات التجريبية بنجاح (${d.batch_id}). إجمالي: ${d.counts.total_writes} سجل.` : `✓ Demo data seeded successfully (${d.batch_id}). Total: ${d.counts.total_writes} records.` });
-        await fetchStatus();
-      } else {
-        setMessage({ type: "error", text: d.error || (isAr ? "حدث خطأ" : "An error occurred") });
-      }
-    } catch (e) {
-      setMessage({ type: "error", text: e.message });
-    } finally {
-      setSeeding(false);
-    }
-  };
+  const seedMutation = useMutation({
+    mutationFn: () => seedDemoData(userProfile),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["demo-data-status"] });
+      toast.success(
+        isAr
+          ? `✅ تم إنشاء البيانات التجريبية! (${result.orgs} منشأة، ${result.jobs} وظيفة، ${result.applications} طلب)`
+          : `✅ Demo data created! (${result.orgs} orgs, ${result.jobs} jobs, ${result.applications} apps)`
+      );
+    },
+    onError: (err) => {
+      toast.error((isAr ? "فشل الإنشاء: " : "Seed failed: ") + err.message);
+    },
+  });
 
-  const handleClear = async () => {
-    setClearing(true);
-    setConfirmClear(false);
-    setMessage(null);
-    try {
-      const res = await base44.functions.invoke("clearDemoData", { session_token: token });
-      const d = res.data;
-      if (d.success) {
-        setMessage({ type: "success", text: isAr ? `✓ تم حذف ${d.deleted} سجل تجريبي بنجاح.` : `✓ Successfully deleted ${d.deleted} demo records.` });
-        await fetchStatus();
-      } else {
-        setMessage({ type: "error", text: d.error || (isAr ? "فشل الحذف" : "Deletion failed") });
-      }
-    } catch (e) {
-      setMessage({ type: "error", text: e.message });
-    } finally {
-      setClearing(false);
-    }
-  };
+  const clearMutation = useMutation({
+    mutationFn: () => clearDemoData(userProfile),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["demo-data-status"] });
+      setConfirmClear(false);
+      toast.success(isAr ? "✅ تم حذف جميع البيانات التجريبية بنجاح" : "✅ All demo data cleared successfully");
+    },
+    onError: (err) => {
+      toast.error((isAr ? "فشل الحذف: " : "Clear failed: ") + err.message);
+    },
+  });
+
+  const isSeeding = seedMutation.isPending;
+  const isClearing = clearMutation.isPending;
 
   return (
     <div dir={isAr ? "rtl" : "ltr"} className="max-w-2xl mx-auto space-y-6">
@@ -114,7 +72,7 @@ export default function DemoTools() {
         </div>
         <div>
           <h1 className="text-xl font-bold">{isAr ? "أدوات البيانات التجريبية" : "Demo Data Tools"}</h1>
-          <p className="text-sm text-muted-foreground">{isAr ? "للاختبار والمراجعة فقط — لا تؤثر على البيانات الحقيقية" : "For testing & review only — does not affect real data"}</p>
+          <p className="text-sm text-muted-foreground">{isAr ? "إنشاء وحذف بيانات تجريبية لاختبار المنصة" : "Seed and remove demo data for platform testing"}</p>
         </div>
       </div>
 
@@ -123,7 +81,7 @@ export default function DemoTools() {
         <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
         <div className="text-sm text-amber-800">
           <p className="font-semibold mb-1">{isAr ? "تحذير: بيانات تجريبية مؤقتة" : "Warning: Temporary Demo Data"}</p>
-          <p>{isAr ? "جميع السجلات مُعلَّمة بـ is_demo: true وتحمل demo_batch_id لسهولة الحذف لاحقاً. لا تنشر التطبيق أمام مستخدمين حقيقيين أثناء وجود هذه البيانات." : "All records are tagged with is_demo: true and a demo_batch_id for easy removal. Do not expose the app to real users while demo data exists."}</p>
+          <p>{isAr ? "جميع السجلات مُعلَّمة بـ is_demo=true وتحمل demo_batch_id لسهولة الحذف لاحقاً. لا تنشر التطبيق أمام مستخدمين حقيقيين أثناء وجود هذه البيانات." : "All records are tagged with is_demo=true for easy removal. Do not expose to real users while demo data exists."}</p>
         </div>
       </div>
 
@@ -131,70 +89,39 @@ export default function DemoTools() {
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-base">{isAr ? "حالة البيانات التجريبية" : "Demo Data Status"}</h2>
-          <Button variant="ghost" size="sm" onClick={fetchStatus} disabled={loadingStatus}>
-            <RefreshCw className={`w-4 h-4 ${loadingStatus ? "animate-spin" : ""}`} />
-          </Button>
+          <button
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["demo-data-status"] })}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            title={isAr ? "تحديث" : "Refresh"}
+          >
+            <RefreshCw className={`w-4 h-4 ${statusLoading ? "animate-spin" : ""}`} />
+          </button>
         </div>
 
-        {loadingStatus ? (
-          <div className="flex items-center gap-2 text-muted-foreground py-4">
+        {statusLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">{isAr ? "جارٍ التحقق..." : "Checking..."}</span>
+            {isAr ? "جارٍ التحميل..." : "Loading..."}
           </div>
-        ) : status ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              {status.has_demo_data ? (
-                <><CheckCircle2 className="w-5 h-5 text-green-600" /><span className="font-medium text-sm text-green-700">{isAr ? "توجد بيانات تجريبية" : "Demo data exists"}</span></>
-              ) : (
-                <><XCircle className="w-5 h-5 text-muted-foreground" /><span className="font-medium text-sm text-muted-foreground">{isAr ? "لا توجد بيانات تجريبية" : "No demo data"}</span></>
-              )}
+        ) : hasDemoData ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-medium text-emerald-700">
+                {isAr ? `${status.total} سجل تجريبي موجود في النظام` : `${status.total} demo records exist in the system`}
+              </span>
             </div>
-            {status.has_demo_data && (
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <div>{isAr ? "رقم الدفعة:" : "Batch ID:"} <span className="font-mono font-medium text-foreground">{status.batch_id}</span></div>
-                {status.created_at && <div>{isAr ? "تاريخ الإنشاء:" : "Created:"} {new Date(status.created_at).toLocaleString(isAr ? "ar" : "en")}</div>}
-                <div className="font-medium mt-1">{isAr ? `الإجمالي: ${status.total_records} سجل` : `Total: ${status.total_records} records`}</div>
-              </div>
-            )}
-            {status.has_demo_data && (
-              <div className="mt-3 pt-3 border-t border-border">
-                {Object.entries(status.counts || {}).map(([col, count]) => (
-                  <StatusRow key={col} label={COLLECTIONS_AR[col] || col} count={count} />
-                ))}
-              </div>
-            )}
+            <StatBadge icon={Building2} label={isAr ? "المنشآت" : "Organizations"} count={status.orgs} color="bg-purple-50 text-purple-700 border-purple-200" />
+            <StatBadge icon={Briefcase} label={isAr ? "الوظائف" : "Jobs"} count={status.jobs} color="bg-blue-50 text-blue-700 border-blue-200" />
+            <StatBadge icon={FileText} label={isAr ? "الطلبات" : "Applications"} count={status.applications} color="bg-green-50 text-green-700 border-green-200" />
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">{isAr ? "تعذر جلب الحالة" : "Could not fetch status"}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+            <Database className="w-4 h-4" />
+            {isAr ? "لا توجد بيانات تجريبية حالياً في النظام." : "No demo data currently exists in the system."}
+          </div>
         )}
       </div>
-
-      {/* Message feedback */}
-      {message && (
-        <div className={`p-4 rounded-xl border text-sm ${
-          message.type === "success" ? "bg-green-50 border-green-200 text-green-800" :
-          message.type === "warn" ? "bg-amber-50 border-amber-200 text-amber-800" :
-          "bg-red-50 border-red-200 text-red-800"
-        }`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* Force seed confirmation */}
-      {confirmForce && (
-        <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-3">
-          <p className="text-sm font-medium text-orange-800">{isAr ? "هل أنت متأكد من إنشاء دفعة جديدة؟ ستُضاف إلى البيانات الموجودة." : "Are you sure you want to create a new batch? It will be added alongside existing demo data."}</p>
-          <div className="flex gap-2">
-            <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white" onClick={() => handleSeed(true)} disabled={seeding}>
-              {isAr ? "نعم، أنشئ دفعة جديدة" : "Yes, create new batch"}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => { setConfirmForce(false); setMessage(null); }}>
-              {isAr ? "إلغاء" : "Cancel"}
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -206,47 +133,79 @@ export default function DemoTools() {
           </div>
           <p className="text-xs text-muted-foreground">
             {isAr
-              ? "ينشئ 16 مستخدماً، 4 مؤسسات، 18 وظيفة، 22 طلباً، ملاحظات، تقييمات وإشعارات."
-              : "Creates 16 users, 4 organizations, 18 jobs, 22 applications, notes, evaluations & notifications."}
+              ? "ينشئ 4 منشآت، 16 وظيفة، و20 طلباً تجريبياً بحالات مختلفة."
+              : "Creates 4 organizations, 16 jobs, and 20 applications with various statuses."}
           </p>
           <Button
-            className="w-full bg-primary text-primary-foreground"
-            onClick={() => handleSeed(false)}
-            disabled={seeding || clearing}
+            className="w-full"
+            onClick={() => seedMutation.mutate()}
+            disabled={isSeeding || hasDemoData}
           >
-            {seeding ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isAr ? "جارٍ الإنشاء..." : "Seeding..."}</> : <><Database className="w-4 h-4 mr-2" />{isAr ? "إنشاء البيانات التجريبية" : "Generate Demo Data"}</>}
+            {isSeeding ? (
+              <><Loader2 className="w-4 h-4 me-2 animate-spin" />{isAr ? "جاري الإنشاء..." : "Seeding..."}</>
+            ) : hasDemoData ? (
+              <><CheckCircle2 className="w-4 h-4 me-2" />{isAr ? "البيانات موجودة مسبقاً" : "Data already exists"}</>
+            ) : (
+              <><Database className="w-4 h-4 me-2" />{isAr ? "إنشاء البيانات التجريبية" : "Seed Demo Data"}</>
+            )}
           </Button>
+          {hasDemoData && (
+            <p className="text-[11px] text-muted-foreground text-center">
+              {isAr ? "احذف البيانات الحالية أولاً لإنشاء دفعة جديدة" : "Clear existing data first to seed a new batch"}
+            </p>
+          )}
         </div>
 
         {/* Clear */}
-        <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+        <div className={`bg-card border border-border rounded-xl p-5 space-y-3 ${!hasDemoData ? "opacity-50" : ""}`}>
           <div className="flex items-center gap-2">
             <Trash2 className="w-5 h-5 text-destructive" />
             <h3 className="font-semibold text-sm">{isAr ? "حذف البيانات التجريبية" : "Clear Demo Data"}</h3>
           </div>
           <p className="text-xs text-muted-foreground">
             {isAr
-              ? "يحذف جميع السجلات المعلَّمة بـ is_demo: true. لن تُحذف أي بيانات حقيقية."
-              : "Deletes all records tagged with is_demo: true. No real data will be affected."}
+              ? "يحذف جميع السجلات التجريبية المُعلَّمة من المنشآت والوظائف والطلبات."
+              : "Removes all demo-tagged organizations, jobs, and applications permanently."}
           </p>
+
           {!confirmClear ? (
             <Button
               variant="outline"
-              className="w-full border-destructive text-destructive hover:bg-destructive/10"
+              className="w-full border-destructive text-destructive hover:bg-destructive/5"
               onClick={() => setConfirmClear(true)}
-              disabled={seeding || clearing || !status?.has_demo_data}
+              disabled={!hasDemoData || isClearing}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <Trash2 className="w-4 h-4 me-2" />
               {isAr ? "حذف البيانات التجريبية" : "Clear Demo Data"}
             </Button>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-destructive">{isAr ? "هل أنت متأكد؟ لا يمكن التراجع." : "Are you sure? This cannot be undone."}</p>
+              <p className="text-xs font-semibold text-destructive text-center">
+                {isAr ? "⚠️ هل أنت متأكد؟ لا يمكن التراجع!" : "⚠️ Sure? This cannot be undone!"}
+              </p>
               <div className="flex gap-2">
-                <Button size="sm" variant="destructive" onClick={handleClear} disabled={clearing}>
-                  {clearing ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />{isAr ? "جارٍ الحذف..." : "Clearing..."}</> : (isAr ? "نعم، احذف" : "Yes, clear")}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setConfirmClear(false)}
+                  disabled={isClearing}
+                >
+                  {isAr ? "إلغاء" : "Cancel"}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setConfirmClear(false)}>{isAr ? "إلغاء" : "Cancel"}</Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => clearMutation.mutate()}
+                  disabled={isClearing}
+                >
+                  {isClearing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    isAr ? "تأكيد الحذف" : "Confirm"
+                  )}
+                </Button>
               </div>
             </div>
           )}
@@ -255,25 +214,27 @@ export default function DemoTools() {
 
       {/* Demo accounts info */}
       <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="font-semibold text-sm mb-3">{isAr ? "معلومات الحسابات التجريبية" : "Demo Account Details"}</h3>
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="w-4 h-4 text-muted-foreground" />
+          <h3 className="font-semibold text-sm">{isAr ? "معلومات الحسابات التجريبية" : "Demo Account Details"}</h3>
+        </div>
         <p className="text-xs text-muted-foreground mb-3">
           {isAr
-            ? "الحسابات التجريبية موجودة فقط في Firestore وليس لها كلمات مرور حقيقية في Firebase Auth. يمكن الاطلاع على بياناتها من لوحة المشرف."
-            : "Demo accounts exist in Firestore only and do not have real Firebase Auth passwords. View their data from the admin panel."}
+            ? "هذه الوظائف والمنشآت ستكون مرتبطة بأصحاب عمل تجريبيين. المرشحون التجريبيون هم مجرد بريد إلكتروني مدرج في الطلبات دون حسابات Auth."
+            : "Demo jobs & orgs are linked to dummy employer emails. Demo candidates appear only in applications without real Auth accounts."}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="bg-muted/40 rounded-lg p-3">
-            <p className="font-semibold mb-1">{isAr ? "مرشحون (12)" : "Candidates (12)"}</p>
-            <p className="text-muted-foreground">demo.yousuf@hellostafftest.com</p>
-            <p className="text-muted-foreground">demo.maryam@hellostafftest.com</p>
-            <p className="text-muted-foreground text-xs mt-1 italic">{isAr ? "...و10 آخرين" : "...and 10 more"}</p>
+            <p className="font-semibold mb-2 text-muted-foreground">{isAr ? "مرشحون تجريبيون" : "Demo Candidates"}</p>
+            {["demo.yousuf@hellostafftest.com","demo.maryam@hellostafftest.com","demo.ahmad@hellostafftest.com","demo.sara@hellostafftest.com","demo.khaled@hellostafftest.com"].map(e => (
+              <p key={e} className="text-muted-foreground font-mono">{e}</p>
+            ))}
           </div>
           <div className="bg-muted/40 rounded-lg p-3">
-            <p className="font-semibold mb-1">{isAr ? "أصحاب عمل (4)" : "Employers (4)"}</p>
-            <p className="text-muted-foreground">demo.org1@hellostafftest.com</p>
-            <p className="text-muted-foreground">demo.org2@hellostafftest.com</p>
-            <p className="text-muted-foreground">demo.org3@hellostafftest.com</p>
-            <p className="text-muted-foreground">demo.org4@hellostafftest.com</p>
+            <p className="font-semibold mb-2 text-muted-foreground">{isAr ? "أصحاب عمل تجريبيون" : "Demo Employers"}</p>
+            {["demo.org1@hellostafftest.com","demo.org2@hellostafftest.com","demo.org3@hellostafftest.com","demo.org4@hellostafftest.com"].map(e => (
+              <p key={e} className="text-muted-foreground font-mono">{e}</p>
+            ))}
           </div>
         </div>
       </div>

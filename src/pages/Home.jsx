@@ -7,6 +7,8 @@ import WhySection from "../components/landing/WhySection";
 import Testimonials from "../components/landing/Testimonials";
 import FAQ from "../components/landing/FAQ";
 import CTASection from "../components/landing/CTASection";
+import TopEmployeesSection from "../components/landing/TopEmployeesSection";
+import LatestNewsSection from "../components/landing/LatestNewsSection";
 
 export default function Home() {
   return (
@@ -15,9 +17,11 @@ export default function Home() {
       <HowItWorks />
       <JobCategories />
       <TopCompaniesCarousel />
+      <TopEmployeesSection />
       <FeaturesSection />
       <WhySection />
       <Testimonials />
+      <LatestNewsSection />
       <FAQ />
       <CTASection />
     </div>

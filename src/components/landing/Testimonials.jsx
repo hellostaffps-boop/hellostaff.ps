@@ -24,16 +24,22 @@ export default function Testimonials() {
 
         <div className="grid md:grid-cols-3 gap-6">
           {testimonials.map((item, i) => (
-            <div key={i} className="bg-secondary/30 rounded-2xl p-8 border border-border">
-              <div className="flex gap-1 mb-4">
+            <div key={i} className="card-premium hover-lift rounded-2xl p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-bl-full -z-10" />
+              <div className="flex gap-1 mb-6">
                 {[...Array(5)].map((_, j) => (
                   <Star key={j} className="w-4 h-4 fill-accent text-accent" />
                 ))}
               </div>
-              <p className="text-sm text-foreground leading-relaxed mb-6">"{item.text}"</p>
-              <div>
-                <div className="font-semibold text-sm">{item.name}</div>
-                <div className="text-xs text-muted-foreground">{item.role}</div>
+              <p className="text-sm text-foreground/80 leading-relaxed mb-8 italic">"{item.text}"</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm">
+                  {item.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="font-semibold text-sm">{item.name}</div>
+                  <div className="text-xs text-muted-foreground">{item.role}</div>
+                </div>
               </div>
             </div>
           ))}

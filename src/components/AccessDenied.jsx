@@ -2,7 +2,7 @@ import { ShieldAlert, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 
 /**
  * AccessDenied — bilingual, polished forbidden/access-denied state.
@@ -10,7 +10,7 @@ import { useFirebaseAuth } from "@/lib/firebaseAuth";
  */
 export default function AccessDenied({ message, variant = "forbidden" }) {
   const { t, lang } = useLanguage();
-  const { userProfile } = useFirebaseAuth();
+  const { userProfile } = useAuth();
   const navigate = useNavigate();
 
   const isAr = lang === "ar";

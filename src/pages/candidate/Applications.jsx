@@ -1,18 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
-import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getInterviewsForApplications } from "@/lib/interviewService";
 import { getInterviewSlotsForApplications } from "@/lib/interviewSlotService";
-import { Badge } from "@/components/ui/badge";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import ApplicationCard from "../../components/ApplicationCard";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
-import { getApplicationsByCandidate } from "@/lib/firestoreService";
-import { db } from "@/lib/firebase";
+import { useAuth } from "@/lib/supabaseAuth";
+import { getApplicationsByCandidate } from "@/lib/supabaseService";
+import { supabase } from "@/lib/supabaseClient";
 
 const STATUS_COLORS = {
   pending: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -28,36 +26,36 @@ const FILTER_TABS = ["all", "submitted", "reviewing", "shortlisted", "rejected",
 
 export default function Applications() {
   const { t, lang } = useLanguage();
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("all");
-  const [realTimeApps, setRealTimeApps] = useState([]);
 
   const { data: applications = [], isLoading } = useQuery({
-    queryKey: ["my-applications", firebaseUser?.uid],
-    queryFn: () => getApplicationsByCandidate(firebaseUser.uid),
-    enabled: !!firebaseUser,
+    queryKey: ["my-applications", user?.email],
+    queryFn: () => getApplicationsByCandidate(user.email),
+    enabled: !!user,
   });
 
   // Real-time subscription to applications
   useEffect(() => {
-    if (!firebaseUser?.email) return;
+    if (!user?.email) return;
 
-    const q = query(
-      collection(db, "applications"),
-      where("candidate_email", "==", firebaseUser.email),
-      orderBy("applied_at", "desc")
-    );
+    const channel = supabase
+      .channel('public:applications')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'applications',
+        filter: `candidate_email=eq.${user.email}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ["my-applications", user.email] });
+      })
+      .subscribe();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const apps = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setRealTimeApps(apps);
-    });
-
-    return () => unsubscribe();
-  }, [firebaseUser?.email]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email, queryClient]);
 
   const { data: interviews = {} } = useQuery({
     queryKey: ["my-interviews", applications.map((a) => a.id).join(",")],
@@ -71,7 +69,7 @@ export default function Applications() {
     enabled: applications.length > 0,
   });
 
-  const appsList = realTimeApps.length > 0 ? realTimeApps : applications;
+  const appsList = applications;
 
   const filtered = useMemo(() =>
     activeTab === "all" ? appsList : appsList.filter((a) => a.status === activeTab),
@@ -79,7 +77,16 @@ export default function Applications() {
   );
 
   if (isLoading && appsList.length === 0) {
-    return <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" /></div>;
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-1/3 mb-4 rounded-lg" />
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
   return (

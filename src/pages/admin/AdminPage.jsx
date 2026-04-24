@@ -1,34 +1,11 @@
-import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import AdminLogin from '@/components/AdminLogin';
-import { base44 } from '@/api/base44Client';
-import { getAdminToken } from '@/lib/adminSessionManager';
+import { useAuth } from '@/lib/supabaseAuth';
 
 export default function AdminPage() {
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, userProfile, loading } = useAuth();
 
-  useEffect(() => {
-    checkAdminStatus();
-  }, []);
-
-  const checkAdminStatus = async () => {
-    try {
-      const token = getAdminToken();
-      if (token) {
-        const response = await base44.functions.invoke('getAdminAccessState', { session_token: token });
-        if (response.data?.is_admin) {
-          setIsAdmin(true);
-        }
-      }
-    } catch {
-      // Not admin or not authenticated
-    } finally {
-      setIsCheckingAuth(false);
-    }
-  };
-
-  if (isCheckingAuth) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" />
@@ -36,7 +13,7 @@ export default function AdminPage() {
     );
   }
 
-  if (isAdmin) {
+  if (user && userProfile?.role === 'platform_admin') {
     return <Navigate to="/admin/dashboard" replace />;
   }
 

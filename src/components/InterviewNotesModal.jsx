@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { saveInterviewEvaluation } from "@/lib/interviewService";
-import { useFirebaseAuth } from "@/lib/firebaseAuth";
+import { useAuth } from "@/lib/supabaseAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 
 const RECOMMENDATIONS = {
@@ -29,7 +29,7 @@ const RATING_LABELS = {
 };
 
 export default function InterviewNotesModal({ application, interview, onClose, onSuccess }) {
-  const { firebaseUser } = useFirebaseAuth();
+  const { user } = useAuth();
   const { lang } = useLanguage();
   const ar = lang === "ar";
 
@@ -49,7 +49,7 @@ export default function InterviewNotesModal({ application, interview, onClose, o
   }, [interview]);
 
   const mutation = useMutation({
-    mutationFn: () => saveInterviewEvaluation(firebaseUser.uid, application.id, {
+    mutationFn: () => saveInterviewEvaluation(user.email, application.id, {
       evaluation_notes: notes,
       strengths,
       weaknesses,

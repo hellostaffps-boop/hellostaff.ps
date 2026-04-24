@@ -4,6 +4,7 @@ import CandidateSelectSlotModal from "@/components/CandidateSelectSlotModal";
 import { Clock, MessageCircle, CalendarClock, MapPin, CheckCircle2, AlertCircle, CalendarCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/hooks/useLanguage";
+import { formatDate } from "@/lib/uiHelpers";
 
 const STATUS_COLORS = {
   pending: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -25,7 +26,7 @@ export default function ApplicationCard({ app, interview, interviewSlot, onSlotS
   const [showSlotModal, setShowSlotModal] = useState(false);
   const StatusIcon = STATUS_ICONS[app.status];
 
-  const appliedDate = app.applied_at?.toDate ? app.applied_at.toDate() : new Date(app.applied_at);
+
 
   return (
     <div className="bg-white rounded-xl border border-border p-5 hover:shadow-md transition-shadow">
@@ -49,7 +50,7 @@ export default function ApplicationCard({ app, interview, interviewSlot, onSlotS
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
         <Clock className="w-3.5 h-3.5" />
         {lang === "ar" ? "تم التقديم: " : "Applied: "}
-        {appliedDate.toLocaleDateString(lang === "ar" ? "ar-SA" : "en-GB")}
+        {formatDate(app.applied_at, lang)}
       </div>
 
       {/* Interview Slot — pending selection */}

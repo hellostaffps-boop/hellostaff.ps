@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
-import { base44 } from '@/api/base44Client';
-import { getAdminToken } from '@/lib/adminSessionManager';
+import { useAuth } from '@/lib/supabaseAuth';
+import { getAdminJobsSafe } from '@/lib/adminService';
+import { supabase } from '@/lib/supabaseClient';
 import { Briefcase, Search, ChevronLeft, ShieldAlert, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+
 
 const JOB_STATUS = {
   published: { ar: 'منشورة', en: 'Published', color: 'bg-green-100 text-green-700' },
@@ -16,7 +18,7 @@ const JOB_STATUS = {
 
 const JOB_TYPE_LABELS = {
   barista: { ar: 'باريستا', en: 'Barista' },
-  chef: { ar: 'طاهٍ', en: 'Chef' },
+  chef: { ar: 'شيف', en: 'Chef' },
   waiter: { ar: 'نادل', en: 'Waiter' },
   cashier: { ar: 'كاشير', en: 'Cashier' },
   host: { ar: 'مضيف', en: 'Host' },
@@ -38,6 +40,7 @@ const TABS = ['jobs', 'applications'];
 export default function JobsModeration() {
   const { lang } = useLanguage();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const ar = lang === 'ar';
 
   const [jobs, setJobs] = useState([]);
@@ -49,15 +52,19 @@ export default function JobsModeration() {
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
-    const token = getAdminToken();
-    base44.functions.invoke('getAdminJobs', { session_token: token })
-      .then(res => {
-        setJobs(res.data?.jobs || []);
-        setApplications(res.data?.applications || []);
+    if (!userProfile) return;
+    Promise.all([
+      getAdminJobsSafe(userProfile),
+      supabase.from('applications').select('*').order('created_at', { ascending: false }).limit(200).then(r => r.data || [])
+    ])
+      .then(([jobsData, appsData]) => {
+        setJobs(jobsData);
+        setApplications(appsData);
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [userProfile]);
+
 
   const jobStatuses = ['all', 'published', 'draft', 'closed', 'filled'];
   const appStatuses = ['all', 'pending', 'reviewing', 'shortlisted', 'hired', 'rejected'];
@@ -189,7 +196,7 @@ export default function JobsModeration() {
                       </div>
                       {job.created_date && (
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(job.created_date).toLocaleDateString(ar ? 'ar-SA' : 'en-GB')}
+                          {new Date(job.created_at).toLocaleDateString(ar ? 'ar-SA' : 'en-GB')}
                         </div>
                       )}
                     </div>

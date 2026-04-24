@@ -1,53 +1,61 @@
 /**
- * interviewService.js — Migrated from Firestore to base44 entities (Interview entity).
- * uid parameters now receive email (see supabaseAuth normalization).
+ * interviewService.js — Supabase implementation.
+ * Uses interviews table. uid = user email.
  */
 
-import { base44 } from "@/api/base44Client";
-import { getEmployerProfile } from "@/lib/firestoreService";
-
-const first = (arr) => (arr?.length > 0 ? arr[0] : null);
+import { supabase } from "@/lib/supabaseClient";
+import { getEmployerProfile, createNotification } from "@/lib/supabaseService";
 
 export const getInterview = async (applicationId) => {
-  const results = await base44.entities.Interview.filter({ application_id: applicationId });
-  return first(results);
+  if (!applicationId) return null;
+  const { data, error } = await supabase
+    .from("interviews")
+    .select("*")
+    .eq("application_id", applicationId)
+    .single();
+  if (error && error.code !== "PGRST116") console.error("[getInterview]", error);
+  return data || null;
 };
 
 export const subscribeToInterview = (applicationId, callback) => {
-  // Load initial interview
   getInterview(applicationId).then(callback);
-  // Subscribe to changes
-  return base44.entities.Interview.subscribe((event) => {
-    if (event.data?.application_id === applicationId) {
-      callback(event.data);
-    }
-  });
+  const channel = supabase
+    .channel(`interview:${applicationId}`)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "interviews",
+      filter: `application_id=eq.${applicationId}`,
+    }, (payload) => {
+      callback(payload.new);
+    })
+    .subscribe();
+  return () => supabase.removeChannel(channel);
 };
 
 export const getInterviewsForApplications = async (applicationIds) => {
   if (!applicationIds?.length) return {};
+  const { data, error } = await supabase
+    .from("interviews")
+    .select("*")
+    .in("application_id", applicationIds);
+  if (error) throw error;
   const map = {};
-  await Promise.all(
-    applicationIds.map(async (appId) => {
-      const interview = await getInterview(appId);
-      if (interview) map[appId] = interview;
-    })
-  );
+  (data || []).forEach((i) => { map[i.application_id] = i; });
   return map;
 };
 
-export const scheduleInterview = async (employerUid, applicationId, { scheduled_at, location, type, notes }) => {
-  const profile = await getEmployerProfile(employerUid);
+export const scheduleInterview = async (employerEmail, applicationId, { scheduled_at, location, type, notes }) => {
+  const profile = await getEmployerProfile(employerEmail);
   if (!profile?.organization_id) throw new Error("No organization for this employer");
 
-  const apps = await base44.entities.Application.filter({ id: applicationId });
-  const app = apps[0];
-  if (!app) throw new Error("Application not found");
+  const { data: app, error: appErr } = await supabase
+    .from("applications").select("*").eq("id", applicationId).single();
+  if (appErr || !app) throw new Error("Application not found");
   if (app.organization_id !== profile.organization_id)
     throw new Error("FORBIDDEN: application belongs to another organization");
 
   const existing = await getInterview(applicationId);
-
   const payload = {
     application_id: applicationId,
     job_title: app.job_title || "",
@@ -59,50 +67,52 @@ export const scheduleInterview = async (employerUid, applicationId, { scheduled_
     type: type || "in_person",
     notes: notes || "",
     status: "scheduled",
+    updated_at: new Date().toISOString(),
   };
 
   if (existing?.id) {
-    await base44.entities.Interview.update(existing.id, payload);
+    const { error } = await supabase.from("interviews").update(payload).eq("id", existing.id);
+    if (error) throw error;
   } else {
-    await base44.entities.Interview.create(payload);
+    const { error } = await supabase.from("interviews").insert(payload);
+    if (error) throw error;
   }
 
-  // Notify candidate
   try {
     if (app.candidate_email) {
       const isReschedule = !!existing;
-      await base44.entities.Notification.create({
-        user_email: app.candidate_email,
+      await createNotification({
+        userEmail: app.candidate_email,
         title: isReschedule ? "تحديث موعد المقابلة" : "🎉 تمت جدولة مقابلتك",
         message: isReschedule
           ? `تم تحديث موعد مقابلتك لوظيفة "${app.job_title || "الوظيفة"}"`
           : `تهانينا! تمت جدولة مقابلة لوظيفة "${app.job_title || "الوظيفة"}"`,
         type: "application",
         link: "/candidate/applications",
-        read: false,
       });
     }
   } catch (_) {}
 };
 
-export const saveInterviewEvaluation = async (employerUid, applicationId, { evaluation_notes, strengths, weaknesses, recommendation, rating }) => {
-  const profile = await getEmployerProfile(employerUid);
+export const saveInterviewEvaluation = async (employerEmail, applicationId, { evaluation_notes, strengths, weaknesses, recommendation, rating }) => {
+  const profile = await getEmployerProfile(employerEmail);
   if (!profile?.organization_id) throw new Error("No organization for this employer");
 
-  const apps = await base44.entities.Application.filter({ id: applicationId });
-  const app = apps[0];
-  if (!app) throw new Error("Application not found");
-  if (app.organization_id !== profile.organization_id) throw new Error("FORBIDDEN");
+  const { data: app } = await supabase.from("applications").select("organization_id").eq("id", applicationId).single();
+  if (!app || app.organization_id !== profile.organization_id) throw new Error("FORBIDDEN");
 
   const existing = await getInterview(applicationId);
   if (!existing?.id) throw new Error("Interview not found");
 
-  return base44.entities.Interview.update(existing.id, {
+  const { data, error } = await supabase.from("interviews").update({
     evaluation_notes: evaluation_notes || "",
     strengths: strengths || "",
     weaknesses: weaknesses || "",
     recommendation: recommendation || "",
     rating: rating ?? null,
     status: "completed",
-  });
+    updated_at: new Date().toISOString(),
+  }).eq("id", existing.id).select().single();
+  if (error) throw error;
+  return data;
 };

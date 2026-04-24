@@ -1,0 +1,249 @@
+import React from "react";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetDescription,
+  SheetTrigger
+} from "@/components/ui/sheet";
+import { Bell, Trash2, CheckCircle2, X, Info, MessageSquare, Briefcase, User } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { 
+  getNotifications, 
+  markNotificationRead, 
+  deleteNotification, 
+  markAllNotificationsRead,
+  clearAllNotifications 
+} from "@/lib/supabaseService";
+import { useAuth } from "@/lib/supabaseAuth";
+import { useLanguage } from "@/hooks/useLanguage";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+import { ar, enUS } from "date-fns/locale";
+
+const typeStyles = {
+  application: { icon: FileText, color: "text-blue-500", bg: "bg-blue-50" },
+  job: { icon: Briefcase, color: "text-amber-500", bg: "bg-amber-50" },
+  interview: { icon: User, color: "text-purple-500", bg: "bg-purple-50" },
+  system: { icon: Info, color: "text-accent", bg: "bg-accent/10" },
+  admin_broadcast: { icon: Bell, color: "text-accent", bg: "bg-accent/10" },
+  general: { icon: MessageSquare, color: "text-slate-500", bg: "bg-slate-50" },
+};
+
+export default function NotificationDrawer({ trigger }) {
+  const { user } = useAuth();
+  const { t, lang, isRTL } = useLanguage();
+  const queryClient = useQueryClient();
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ["notifications", user?.email],
+    queryFn: () => getNotifications(user.email),
+    enabled: !!user && isOpen,
+    refetchInterval: 30000,
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: markNotificationRead,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteNotification,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () => markAllNotificationsRead(user.email),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: () => clearAllNotifications(user.email),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  return (
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        {trigger}
+      </SheetTrigger>
+      <SheetContent 
+        side={isRTL ? "right" : "left"} 
+        className="w-full sm:max-w-md p-0 flex flex-col h-screen overflow-hidden border-none glass-card"
+      >
+        <SheetHeader className="p-8 border-b border-border/40 shrink-0 relative bg-white/50">
+          <div className="flex items-center justify-between mb-2">
+            <SheetTitle className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Bell className="w-5 h-5 text-accent" />
+              </div>
+              {t("notifications", "title")}
+            </SheetTitle>
+          </div>
+          <SheetDescription className="text-slate-500 font-medium">
+            {t("notifications", "subtext")}
+          </SheetDescription>
+          
+          <div className="flex items-center gap-3 mt-6">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-xs h-9 rounded-full border-accent/20 hover:bg-accent/5 hover:border-accent/40 transition-all font-medium"
+              onClick={() => markAllReadMutation.mutate()}
+              disabled={unreadCount === 0 || markAllReadMutation.isPending}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 me-2 ms-2" />
+              {t("notifications", "markAllRead")}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-9 rounded-full text-slate-400 hover:text-destructive hover:bg-destructive/5 transition-all font-medium"
+              onClick={() => clearAllMutation.mutate()}
+              disabled={notifications.length === 0 || clearAllMutation.isPending}
+            >
+              <Trash2 className="w-3.5 h-3.5 me-2 ms-2" />
+              {t("notifications", "clearAll")}
+            </Button>
+          </div>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/30">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center p-12 space-y-4">
+              <div className="w-10 h-10 border-4 border-accent/10 border-t-accent rounded-full animate-spin" />
+              <p className="text-sm text-slate-400 font-medium animate-pulse">
+                {t("common", "loading")}
+              </p>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-20 text-center">
+              <div className="w-20 h-20 bg-white rounded-3xl shadow-sm border border-border/40 flex items-center justify-center mb-6">
+                <Bell className="w-10 h-10 text-slate-200" />
+              </div>
+              <h3 className="font-bold text-slate-900 text-lg">{t("notifications", "noNotifications")}</h3>
+              <p className="text-sm text-slate-500 mt-2 max-w-[200px] leading-relaxed">
+                {t("notifications", "noNotificationsDesc")}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/30">
+              <AnimatePresence initial={false}>
+                {notifications.map((notification) => (
+                  <SwipeableNotificationItem
+                    key={notification.id}
+                    notification={notification}
+                    onRead={() => !notification.read && markReadMutation.mutate(notification.id)}
+                    onDelete={() => deleteMutation.mutate(notification.id)}
+                    lang={lang}
+                    isRTL={isRTL}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function SwipeableNotificationItem({ notification, onRead, onDelete, lang, isRTL }) {
+  const swipeDirection = isRTL ? 100 : -100;
+  
+  // Dynamic styles based on type
+  const typeStyle = typeStyles[notification.type] || typeStyles.general;
+  const IconComponent = typeStyle.icon || Info;
+  
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: isRTL ? 100 : -100 }}
+      transition={{ type: "spring", stiffness: 400, damping: 40 }}
+      className="relative overflow-hidden bg-white/40 group"
+    >
+      {/* Sleek Delete Background */}
+      <div 
+        className={cn(
+          "absolute inset-0 bg-slate-100 flex items-center px-10 transition-colors",
+          isRTL ? "justify-start" : "justify-end",
+          "group-hover:bg-red-50/50"
+        )}
+      >
+        <div className="flex flex-col items-center gap-1">
+          <Trash2 className="w-5 h-5 text-red-400" />
+          <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">{lang === 'ar' ? 'حذف' : 'Delete'}</span>
+        </div>
+      </div>
+
+      {/* Main Content Card */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: isRTL ? 0 : -120, right: isRTL ? 120 : 0 }}
+        dragElastic={0.15}
+        onDragEnd={(e, info) => {
+          const threshold = 100;
+          if (isRTL) {
+            if (info.offset.x > threshold) onDelete();
+          } else {
+            if (info.offset.x < -threshold) onDelete();
+          }
+        }}
+        className={cn(
+          "relative bg-white p-5 cursor-pointer flex gap-4 items-start transition-all duration-300",
+          !notification.read ? "bg-white border-l-4 border-l-accent" : "bg-white/60 opacity-80",
+          isRTL && !notification.read && "border-l-0 border-r-4 border-r-accent"
+        )}
+        onClick={onRead}
+      >
+        <div className={cn(
+          "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-white",
+          typeStyle.bg
+        )}>
+          <IconComponent className={cn("w-5 h-5", typeStyle.color)} />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <h4 className={cn(
+              "text-[15px] font-bold text-slate-900 leading-tight truncate",
+              !notification.read ? "opacity-100" : "opacity-70"
+            )}>
+              {notification.title}
+            </h4>
+            <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 uppercase">
+              {formatDistanceToNow(new Date(notification.created_at), { 
+                addSuffix: true,
+                locale: lang === "ar" ? ar : enUS
+              })}
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed font-medium">
+            {notification.message}
+          </p>
+        </div>
+
+        {/* Hover Action Button (Desktop Only) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="opacity-0 group-hover:opacity-100 h-9 w-9 rounded-full bg-slate-50 hover:bg-red-50 hover:text-red-500 transition-all lg:flex hidden shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </motion.div>
+    </motion.div>
+  );
+}
