@@ -3,10 +3,14 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('uploads', 'uploads', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Enable Row Level Security
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
--- 1. Policy to allow public access to view/download files (since getPublicUrl is used)
+-- Drop existing policies if they exist to avoid conflict errors
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own files" ON storage.objects;
+
+-- 1. Policy to allow public access to view/download files
 CREATE POLICY "Public Access"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'uploads');

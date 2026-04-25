@@ -50,8 +50,10 @@ export default function EditProfile() {
   });
 
 
+  const isInitialized = useRef(false);
+
   useEffect(() => {
-    if (existing) {
+    if (existing && !isInitialized.current) {
       setForm({
         headline: existing.headline || "",
         bio: existing.bio || "",
@@ -65,6 +67,7 @@ export default function EditProfile() {
         work_experience: existing.work_experience || [],
         education: existing.education || [],
       });
+      isInitialized.current = true;
     }
   }, [existing]);
 

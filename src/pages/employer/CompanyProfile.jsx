@@ -173,8 +173,10 @@ export default function CompanyProfile() {
     enabled: !!orgId,
   });
 
+  const isInitialized = useRef(false);
+
   useEffect(() => {
-    if (org) {
+    if (org && !isInitialized.current) {
       setForm({
         name: org.name || "",
         business_type: org.business_type || org.industry || "",
@@ -196,6 +198,7 @@ export default function CompanyProfile() {
         perks: org.perks || [],
         team_photos: org.team_photos || [],
       });
+      isInitialized.current = true;
     }
   }, [org]);
 
