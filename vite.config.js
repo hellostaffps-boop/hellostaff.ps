@@ -13,9 +13,11 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
+      injectRegister: 'auto',
       manifest: {
         name: 'Hello Staff',
         short_name: 'HelloStaff',
+        version: '1.0.1',
         description: 'منصة توظيف الضيافة في فلسطين | Palestine Hospitality Jobs Platform',
         theme_color: '#1e3a5f',
         background_color: '#ffffff',
@@ -34,6 +36,10 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    chunkSizeWarningLimit: 2000,
+    sourcemap: false
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
