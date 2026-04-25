@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/supabaseAuth";
 import { getEmployerProfile, getOrganization, saveOrganizationIfOwner } from "@/lib/supabaseService";
 import { uploadFile } from "@/lib/storageService";
 import { getOrgCompletion } from "@/lib/profileCompletion";
+import { PALESTINE_CITIES } from "@/lib/constants";
 
 
 const BUSINESS_TYPES = [
@@ -324,7 +325,16 @@ export default function CompanyProfile() {
             </div>
             <div>
               <Label className="text-sm">City <span className="text-destructive">*</span></Label>
-              <Input value={form.city} onChange={(e) => set("city", e.target.value)} className="mt-1.5" placeholder="City" />
+              <Select value={form.city} onValueChange={(v) => set("city", v)}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select city" /></SelectTrigger>
+                <SelectContent>
+                  {PALESTINE_CITIES.map((city) => (
+                    <SelectItem key={city.value} value={city.label.split(" / ")[0]}>
+                      {city.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">

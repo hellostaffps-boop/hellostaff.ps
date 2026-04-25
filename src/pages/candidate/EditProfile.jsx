@@ -15,6 +15,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/lib/supabaseAuth";
 import { getCandidateProfile, saveCandidateProfile } from "@/lib/supabaseService";
 import { uploadFile } from "@/lib/storageService";
+import { PALESTINE_CITIES } from "@/lib/constants";
 
 
 const emptyExp = () => ({ title: "", company: "", from: "", to: "", current: false, description: "" });
@@ -178,8 +179,16 @@ export default function EditProfile() {
             </div>
             <div>
               <Label className="text-sm">{t("editProfile", "location")}</Label>
-              <Input placeholder={t("editProfile", "locationPlaceholder")} value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })} className="mt-1.5" />
+              <Select value={form.city} onValueChange={(v) => setForm({ ...form, city: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder={t("editProfile", "locationPlaceholder")} /></SelectTrigger>
+                <SelectContent>
+                  {PALESTINE_CITIES.map((city) => (
+                    <SelectItem key={city.value} value={city.label.split(" / ")[0]}>
+                      {city.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import PageHeader from "../../components/PageHeader";
 import { useAuth } from "@/lib/supabaseAuth";
 import { getCandidateProfile } from "@/lib/supabaseService";
 import { useLanguage } from "@/hooks/useLanguage";
+import { PALESTINE_CITIES } from "@/lib/constants";
 
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -292,12 +294,25 @@ export default function CVBuilder() {
               ].map(([field, label]) => (
                 <div key={field} className={field === "linkedin" || field === "website" ? "sm:col-span-2" : ""}>
                   <Label className="text-xs mb-1 block">{label}</Label>
-                  <Input
-                    value={cv.personalInfo[field]}
-                    onChange={(e) => set("personalInfo", field, e.target.value)}
-                    className="h-8 text-sm"
-                    placeholder={label}
-                  />
+                  {field === "location" ? (
+                    <Select value={cv.personalInfo[field]} onValueChange={(v) => set("personalInfo", field, v)}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={label} /></SelectTrigger>
+                      <SelectContent>
+                        {PALESTINE_CITIES.map((city) => (
+                          <SelectItem key={city.value} value={city.label.split(" / ")[0]}>
+                            {city.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={cv.personalInfo[field]}
+                      onChange={(e) => set("personalInfo", field, e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder={label}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -335,7 +350,16 @@ export default function CVBuilder() {
                   </div>
                   <div>
                     <Label className="text-xs mb-1 block">{t("cvBuilder", "locationLabel")}</Label>
-                    <Input value={exp.location} onChange={(e) => updateExp(exp.id, "location", e.target.value)} className="h-8 text-sm" />
+                    <Select value={exp.location} onValueChange={(v) => updateExp(exp.id, "location", v)}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="" /></SelectTrigger>
+                      <SelectContent>
+                        {PALESTINE_CITIES.map((city) => (
+                          <SelectItem key={city.value} value={city.label.split(" / ")[0]}>
+                            {city.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>

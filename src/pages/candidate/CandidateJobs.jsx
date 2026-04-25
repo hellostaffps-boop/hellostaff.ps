@@ -13,6 +13,7 @@ import PageHeader from "../../components/PageHeader";
 import { useLanguage } from "@/hooks/useLanguage";
 import { getPublishedJobs } from "@/lib/supabaseService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PALESTINE_CITIES } from "@/lib/constants";
 
 const DEFAULT_FILTERS = {
   search: "",
@@ -126,12 +127,18 @@ export default function CandidateJobs() {
             <Label className="text-xs font-medium mb-1.5 block">
               {t("candidateJobs", "locationFilter") || "Location"}
             </Label>
-            <Input
-              placeholder={t("candidateJobs", "locationPlaceholder") || "City or area..."}
-              value={filters.location}
-              onChange={(e) => set("location", e.target.value)}
-              className="h-9 text-sm"
-            />
+            <Select value={filters.location} onValueChange={(v) => set("location", v)}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder={t("candidateJobs", "locationPlaceholder") || "City or area..."} />
+              </SelectTrigger>
+              <SelectContent>
+                {PALESTINE_CITIES.map((city) => (
+                  <SelectItem key={city.value} value={city.label.split(" / ")[0]}>
+                    {city.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>

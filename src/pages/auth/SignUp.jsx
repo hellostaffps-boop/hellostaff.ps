@@ -122,7 +122,8 @@ export default function SignUp() {
         await new Promise((r) => setTimeout(r, attempt * 400));
         const { data } = await supabase.from("profiles").select("*").eq("id", newUser.id).single();
         if (data) {
-          const dest = data.role === "candidate" ? "/candidate" : "/employer";
+          // Direct new users straight to the profile completion pages
+          const dest = data.role === "candidate" ? "/candidate/profile/edit" : "/employer/company";
           navigate(dest, { replace: true });
           return;
         }

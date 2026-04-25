@@ -13,6 +13,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/lib/supabaseAuth";
 import { getEmployerProfile, getOrganization, createJobForOwnedOrganization, notifyMatchingCandidatesForJob } from "@/lib/supabaseService";
 import { canPublishJob, incrementJobsUsed } from "@/lib/subscriptionService";
+import { PALESTINE_CITIES } from "@/lib/constants";
 
 
 
@@ -41,10 +42,6 @@ export default function PostJob() {
     enabled: !!orgId,
   });
 
-  const palestinianCities = [
-    "رام الله", "نابلس", "الخليل", "جنين", "طولكرم", "قلقيلية",
-    "أريحا", "بيت لحم", "طوباس", "سلفيت", "القدس"
-  ];
 
   const categories = [
     { value: "barista", label: t("jobCard", "typeBarista") },
@@ -146,8 +143,10 @@ export default function PostJob() {
             <Select value={form.location} onValueChange={(v) => setForm({ ...form, location: v })}>
               <SelectTrigger className="mt-1.5"><SelectValue placeholder="اختر المدينة" /></SelectTrigger>
               <SelectContent>
-                {palestinianCities.map((city) => (
-                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                {PALESTINE_CITIES.map((city) => (
+                  <SelectItem key={city.value} value={city.label.split(" / ")[0]}>
+                    {city.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
