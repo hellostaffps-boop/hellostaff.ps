@@ -12,7 +12,6 @@ import { SettingsProvider } from '@/context/SettingsContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 import AppErrorBoundary from '@/components/AppErrorBoundary';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // ─── Lazy Imports — Auth ──────────────────────────────────────────────────────
 const Login          = lazy(() => import('./pages/auth/Login'));
@@ -206,7 +205,6 @@ function App() {
               </Router>
               <Toaster />
               <SonnerToaster position="top-center" />
-              <SpeedInsights />
             </QueryClientProvider>
           </CartProvider>
         </SupabaseAuthProvider>
