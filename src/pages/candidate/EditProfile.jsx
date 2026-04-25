@@ -144,7 +144,7 @@ export default function EditProfile() {
         ...form,
         years_experience: form.years_experience ? Number(form.years_experience) : 0,
       };
-      await saveCandidateProfile(user.email, data);
+      await saveCandidateProfile(user.id, user.email, data);
       queryClient.invalidateQueries({ queryKey: ["my-candidate-profile"] });
       toast.success(t("editProfile", "saveSuccess"));
       navigate("/candidate/profile");

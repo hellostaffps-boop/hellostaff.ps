@@ -253,8 +253,13 @@ export function SupabaseAuthProvider({ children }) {
     const ALLOWED = ["candidate", "employer_owner"];
     if (!ALLOWED.includes(role)) throw new Error("Invalid role selection");
 
+    // Prevent escalations if profile already exists with a different role (sanity check)
+    if (userProfile && userProfile.role && userProfile.role !== role) {
+       throw new Error("Role already assigned and cannot be changed here");
+    }
+
     await supabase.auth.updateUser({ data: { role } });
-    // Extract name from various OAuth metadata formats
+    
     const fullName = user.user_metadata?.full_name
       || user.user_metadata?.name
       || user.email?.split("@")[0]
@@ -268,7 +273,9 @@ export function SupabaseAuthProvider({ children }) {
       role,
       avatar_url: avatarUrl,
       preferred_language: user.user_metadata?.preferred_language || "ar",
-    }, { onConflict: 'email' });
+      status: 'active' // Ensure status is set
+    }, { onConflict: 'id' }); // Conflict should be on ID for security
+
     if (error) throw error;
     await loadProfile(user.id);
   };

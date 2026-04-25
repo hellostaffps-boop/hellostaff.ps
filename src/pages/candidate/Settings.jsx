@@ -18,8 +18,7 @@ export default function Settings() {
 
   const handleSave = async () => {
     setSaving(true);
-    // Since updateSafeUserFields isn't in supabaseService directly, we'll update the candidate profile which holds the name.
-    await saveCandidateProfile(user.email, { full_name: fullName });
+    await saveCandidateProfile(user.id, user.email, { full_name: fullName });
     toast.success(t("common", "save"));
     setSaving(false);
   };

@@ -11,9 +11,10 @@ export const uploadFile = async (file, folder = "general") => {
   if (!file) throw new Error("No file provided");
   if (file.size > MAX_FILE_SIZE) throw new Error("File is too large (max 20MB)");
 
-  const ext = file.name.split(".").pop();
-  const randomName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const path = `${folder}/${randomName}`;
+  // Improve filename generation using crypto for better randomness
+  const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
+  const uuid = crypto.randomUUID();
+  const path = `${folder}/${uuid}.${ext}`;
 
   const { error } = await supabase.storage
     .from("uploads")
@@ -23,9 +24,9 @@ export const uploadFile = async (file, folder = "general") => {
     });
 
   if (error) {
-    // Fallback: if bucket doesn't exist, create it first
+    console.error("[uploadFile] Error:", error);
     if (error.message?.includes("bucket") || error.statusCode === 404) {
-      throw new Error("Storage bucket 'uploads' not found. Please create it in Supabase dashboard.");
+      throw new Error("Storage bucket 'uploads' not found or inaccessible.");
     }
     throw error;
   }
