@@ -43,33 +43,34 @@ export default function EditProfile() {
     education: [],
   });
 
-  const { data: existing } = useQuery({
+  const { data: existing, isSuccess } = useQuery({
     queryKey: ["my-candidate-profile", user?.email],
     queryFn: () => getCandidateProfile(user.email),
     enabled: !!user,
   });
 
-
   const isInitialized = useRef(false);
 
   useEffect(() => {
-    if (existing && !isInitialized.current) {
-      setForm({
-        headline: existing.headline || "",
-        bio: existing.bio || "",
-        phone: existing.phone || "",
-        city: existing.city || "",
-        preferred_roles: existing.preferred_roles || [],
-        years_experience: existing.years_experience?.toString() || "",
-        availability: existing.availability || "flexible",
-        skills: existing.skills || [],
-        cv_url: existing.cv_url || "",
-        work_experience: existing.work_experience || [],
-        education: existing.education || [],
-      });
+    if (isSuccess && !isInitialized.current) {
+      if (existing) {
+        setForm({
+          headline: existing.headline || "",
+          bio: existing.bio || "",
+          phone: existing.phone || "",
+          city: existing.city || "",
+          preferred_roles: existing.preferred_roles || [],
+          years_experience: existing.years_experience?.toString() || "",
+          availability: existing.availability || "flexible",
+          skills: existing.skills || [],
+          cv_url: existing.cv_url || "",
+          work_experience: existing.work_experience || [],
+          education: existing.education || [],
+        });
+      }
       isInitialized.current = true;
     }
-  }, [existing]);
+  }, [existing, isSuccess]);
 
   const jobTypeOptions = [
     { value: "barista", label: t("jobCard", "typeBarista") },
@@ -138,15 +139,21 @@ export default function EditProfile() {
 
   const handleSave = async () => {
     setSaving(true);
-    const data = {
-      ...form,
-      years_experience: form.years_experience ? Number(form.years_experience) : 0,
-    };
-    await saveCandidateProfile(user.email, data);
-    queryClient.invalidateQueries({ queryKey: ["my-candidate-profile"] });
-    toast.success(t("editProfile", "saveSuccess"));
-    setSaving(false);
-    navigate("/candidate/profile");
+    try {
+      const data = {
+        ...form,
+        years_experience: form.years_experience ? Number(form.years_experience) : 0,
+      };
+      await saveCandidateProfile(user.email, data);
+      queryClient.invalidateQueries({ queryKey: ["my-candidate-profile"] });
+      toast.success(t("editProfile", "saveSuccess"));
+      navigate("/candidate/profile");
+    } catch (err) {
+      toast.error(lang === "ar" ? "فشل حفظ البيانات: " + err.message : "Failed to save: " + err.message);
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
 

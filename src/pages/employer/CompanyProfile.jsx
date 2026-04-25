@@ -167,7 +167,7 @@ export default function CompanyProfile() {
 
   const orgId = employerProfile?.organization_id;
 
-  const { data: org } = useQuery({
+  const { data: org, isSuccess } = useQuery({
     queryKey: ["organization", orgId],
     queryFn: () => getOrganization(orgId),
     enabled: !!orgId,
@@ -176,31 +176,33 @@ export default function CompanyProfile() {
   const isInitialized = useRef(false);
 
   useEffect(() => {
-    if (org && !isInitialized.current) {
-      setForm({
-        name: org.name || "",
-        business_type: org.business_type || org.industry || "",
-        city: org.city || "",
-        address: org.address || "",
-        description: org.description || "",
-        phone: org.phone || "",
-        email: org.email || "",
-        website: org.website || "",
-        logo_url: org.logo_url || "",
-        cover_image_url: org.cover_image_url || "",
-        video_url: org.video_url || "",
-        slogan: org.slogan || "",
-        map_url: org.map_url || "",
-        founded_year: org.founded_year || "",
-        instagram_url: org.instagram_url || "",
-        linkedin_url: org.linkedin_url || "",
-        culture_values: org.culture_values || [],
-        perks: org.perks || [],
-        team_photos: org.team_photos || [],
-      });
+    if (isSuccess && !isInitialized.current) {
+      if (org) {
+        setForm({
+          name: org.name || "",
+          business_type: org.business_type || org.industry || "",
+          city: org.city || "",
+          address: org.address || "",
+          description: org.description || "",
+          phone: org.phone || "",
+          email: org.email || "",
+          website: org.website || "",
+          logo_url: org.logo_url || "",
+          cover_image_url: org.cover_image_url || "",
+          video_url: org.video_url || "",
+          slogan: org.slogan || "",
+          map_url: org.map_url || "",
+          founded_year: org.founded_year || "",
+          instagram_url: org.instagram_url || "",
+          linkedin_url: org.linkedin_url || "",
+          culture_values: org.culture_values || [],
+          perks: org.perks || [],
+          team_photos: org.team_photos || [],
+        });
+      }
       isInitialized.current = true;
     }
-  }, [org]);
+  }, [org, isSuccess]);
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -209,10 +211,16 @@ export default function CompanyProfile() {
     if (!form.name) { toast.error("Company name is required"); return; }
     if (!form.email) { toast.error("Company email is required"); return; }
     setSaving(true);
-    await saveOrganizationIfOwner(uid, orgId, form);
-    queryClient.invalidateQueries({ queryKey: ["organization"] });
-    toast.success("Company profile saved!");
-    setSaving(false);
+    try {
+      await saveOrganizationIfOwner(uid, orgId, form);
+      queryClient.invalidateQueries({ queryKey: ["organization"] });
+      toast.success("Company profile saved!");
+    } catch (err) {
+      toast.error("Failed to save: " + err.message);
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleLogoUpload = async (e) => {
