@@ -7,16 +7,20 @@
 // ─── Candidate ────────────────────────────────────────────────────────────────
 
 const CANDIDATE_WEIGHTS = [
-  { key: "headline",        weight: 15, check: (p) => !!p?.headline },
-  { key: "bio",             weight: 10, check: (p) => !!p?.bio },
-  { key: "city",            weight: 10, check: (p) => !!p?.city },
-  { key: "phone",           weight: 5,  check: (p) => !!p?.phone },
-  { key: "preferred_roles", weight: 15, check: (p) => p?.preferred_roles?.length > 0 },
-  { key: "skills",          weight: 15, check: (p) => p?.skills?.length > 0 },
-  { key: "availability",    weight: 10, check: (p) => !!p?.availability },
-  { key: "years_experience",weight: 5,  check: (p) => p?.years_experience != null && p.years_experience !== "" },
-  { key: "work_experience", weight: 10, check: (p) => p?.work_experience?.length > 0 },
-  { key: "cv_url",          weight: 5,  check: (p) => !!p?.cv_url },
+  { key: "headline",            weight: 10, check: (p) => !!p?.headline },
+  { key: "bio",                 weight: 10, check: (p) => !!p?.bio },
+  { key: "city",                weight: 5,  check: (p) => !!p?.city },
+  { key: "phone",               weight: 5,  check: (p) => !!p?.phone },
+  { key: "whatsapp_number",     weight: 5,  check: (p) => !!p?.whatsapp_number },
+  { key: "preferred_roles",     weight: 10, check: (p) => p?.preferred_roles?.length > 0 },
+  { key: "skills",              weight: 15, check: (p) => p?.skills?.length > 0 },
+  { key: "availability",        weight: 5,  check: (p) => !!p?.availability },
+  { key: "current_status",      weight: 5,  check: (p) => !!p?.current_status },
+  { key: "expected_salary_min", weight: 5,  check: (p) => p?.expected_salary_min > 0 },
+  { key: "years_experience",    weight: 5,  check: (p) => p?.years_experience != null && p.years_experience !== "" },
+  { key: "work_experience",     weight: 10, check: (p) => p?.work_experience?.length > 0 },
+  { key: "cv_url",              weight: 5,  check: (p) => !!p?.cv_url },
+  { key: "intro_video_url",     weight: 5,  check: (p) => !!p?.intro_video_url },
 ];
 
 /**

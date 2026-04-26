@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,8 +43,13 @@ const itemVariants = {
 export default function SignUp() {
   const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const roleParam = searchParams.get("role");
+  
   const { signUpEmail, signInWithGoogle, user, userProfile, loading: authLoading } = useAuth();
-  const [role, setRole] = useState(null);
+  const [role, setRole] = useState(roleParam || null);
+  const isRolePreSelected = !!roleParam;
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -249,25 +254,27 @@ export default function SignUp() {
               <p className="text-muted-foreground mt-3">{t("auth", "signUpSubtext")}</p>
             </motion.div>
 
-            <motion.div variants={itemVariants} className="mb-8">
-              <Label className="text-sm font-bold mb-4 block uppercase tracking-widest text-muted-foreground/80">{t("auth", "accountType")}</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {roleOptions.map((opt) => (
-                  <button key={opt.id} onClick={() => setRole(opt.id)}
-                    className={cn("flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all text-center group relative overflow-hidden",
-                      role === opt.id ? "border-accent bg-accent/5 ring-4 ring-accent/10" : "border-border/60 hover:border-accent/40 bg-secondary/20")}>
-                    <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center transition-all", 
-                      role === opt.id ? "bg-accent text-primary" : "bg-background text-muted-foreground group-hover:text-accent")}>
-                      <opt.icon className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm tracking-tight">{opt.label}</div>
-                      <div className="text-[10px] text-muted-foreground mt-1 leading-tight group-hover:text-muted-foreground/80">{opt.desc}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
+            {!isRolePreSelected && (
+              <motion.div variants={itemVariants} className="mb-8">
+                <Label className="text-sm font-bold mb-4 block uppercase tracking-widest text-muted-foreground/80">{t("auth", "accountType")}</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {roleOptions.map((opt) => (
+                    <button key={opt.id} onClick={() => setRole(opt.id)} type="button"
+                      className={cn("flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all text-center group relative overflow-hidden",
+                        role === opt.id ? "border-accent bg-accent/5 ring-4 ring-accent/10" : "border-border/60 hover:border-accent/40 bg-secondary/20")}>
+                      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center transition-all", 
+                        role === opt.id ? "bg-accent text-primary" : "bg-background text-muted-foreground group-hover:text-accent")}>
+                        <opt.icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm tracking-tight">{opt.label}</div>
+                        <div className="text-[10px] text-muted-foreground mt-1 leading-tight group-hover:text-muted-foreground/80">{opt.desc}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
 
             <form onSubmit={handleSignUp} className="space-y-5">
               <motion.div variants={itemVariants} className="space-y-1.5">
