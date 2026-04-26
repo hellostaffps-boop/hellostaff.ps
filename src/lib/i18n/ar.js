@@ -30,6 +30,7 @@ export const ar = {
     contact: "تواصل معنا",
     signIn: "تسجيل الدخول",
     postJob: "انشر وظيفة",
+    signUp: "إنشاء حساب",
     signOut: "تسجيل الخروج",
     dashboard: "لوحة التحكم",
   },

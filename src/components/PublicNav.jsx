@@ -171,7 +171,7 @@ export default function PublicNav() {
                 </Link>
                 <Link to="/auth/signup">
                   <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                    {t("nav", "postJob")}
+                    {t("nav", "signUp")}
                   </Button>
                 </Link>
               </>
@@ -237,7 +237,7 @@ export default function PublicNav() {
                   </Link>
                   <Link to="/auth/signup" onClick={() => setOpen(false)}>
                     <Button size="sm" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                      {t("nav", "postJob")}
+                      {t("nav", "signUp")}
                     </Button>
                   </Link>
                 </>

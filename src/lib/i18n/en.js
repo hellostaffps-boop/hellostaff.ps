@@ -30,6 +30,7 @@ export const en = {
     contact: "Contact",
     signIn: "Sign In",
     postJob: "Post a Job",
+    signUp: "Sign Up",
     dashboard: "Dashboard",
     signOut: "Sign Out",
   },
