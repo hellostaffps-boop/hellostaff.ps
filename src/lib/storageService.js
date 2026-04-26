@@ -1,6 +1,5 @@
 /**
  * storageService.js — Supabase Storage helper.
- * Replaces base44.integrations.Core.UploadFile
  */
 
 import { supabase } from "@/lib/supabaseClient";

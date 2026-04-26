@@ -113,7 +113,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.broadcast_notification_secure(TEXT, TEXT, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.broadcast_notification_secure(TEXT, TEXT, TEXT) TO authenticated;
 
 -- ============================================================
 -- SECTION 3: CRIT-003 — Demo Data RPC Fix
@@ -220,8 +220,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.seed_demo_data() TO service_role;
-GRANT EXECUTE ON FUNCTION public.clear_demo_data() TO service_role;
+GRANT EXECUTE ON FUNCTION public.seed_demo_data() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.clear_demo_data() TO authenticated;
 
 -- ============================================================
 -- SECTION 4: HIGH-003 — candidate_profiles

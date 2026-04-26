@@ -9,26 +9,26 @@ import { useAuth } from "@/lib/supabaseAuth";
 import { getSavedJobIds, toggleSaveJob } from "@/lib/savedJobsService";
 
 export function useSavedJobs() {
-  const { user: firebaseUser, userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const isCandidate = userProfile?.role === "candidate";
   const [savedJobIds, setSavedJobIds] = useState(new Set());
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!firebaseUser || !isCandidate) {
+    if (!user || !isCandidate) {
       setSavedJobIds(new Set());
       return;
     }
     setLoading(true);
-    getSavedJobIds(firebaseUser.uid).then((ids) => {
+    getSavedJobIds(user.id).then((ids) => {
       setSavedJobIds(ids);
       setLoading(false);
     });
-  }, [firebaseUser?.uid, isCandidate]);
+  }, [user?.id, isCandidate]);
 
   const toggleSave = useCallback(
     async (job) => {
-      if (!firebaseUser || !isCandidate) return;
+      if (!user || !isCandidate) return;
       // Optimistic update
       setSavedJobIds((prev) => {
         const next = new Set(prev);
@@ -36,7 +36,7 @@ export function useSavedJobs() {
         else next.add(job.id);
         return next;
       });
-      const nowSaved = await toggleSaveJob(firebaseUser.uid, job);
+      const nowSaved = await toggleSaveJob(user.id, job);
       // Sync in case of mismatch
       setSavedJobIds((prev) => {
         const next = new Set(prev);
@@ -45,7 +45,7 @@ export function useSavedJobs() {
         return next;
       });
     },
-    [firebaseUser?.uid, isCandidate]
+    [user?.id, isCandidate]
   );
 
   return { savedJobIds, toggleSave, loading, isCandidate };

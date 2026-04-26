@@ -1,100 +1,158 @@
-# Hello Staff — Security Fixes Package
+# Hello Staff — Security Fixes Package v2 (base44 Removed)
 **تاريخ:** 2026-04-27
 
 ---
 
-## ما يحتويه هذا المجلد
+## ما تم في هذه النسخة
 
-| الملف | المسار الأصلي في مشروعك | الغرض |
-|-------|------------------------|-------|
-| **src/lib/supabaseClient.js** | `src/lib/supabaseClient.js` | إزالة fallback الخطير |
-| **src/lib/adminService.js** | `src/lib/adminService.js` | assertAdmin ثنائي الطبقة |
-| **src/lib/services/jobService.js** | `src/lib/services/jobService.js` | حماية deleteJob/updateJob |
-| **src/lib/services/applicationService.js** | `src/lib/services/applicationService.js` | حماية التطبيقات والرسائل |
-| **src/lib/services/notificationService.js** | `src/lib/services/notificationService.js` | حماية الإشعارات |
-| **src/lib/storeService.js** | `src/lib/storeService.js` | التحقق من الأسعار |
-| **src/lib/storageService.js** | `src/lib/storageService.js` | whitelist للـ MIME |
-| **src/lib/demoData.js** | `src/lib/demoData.js` | إزالة localStorage demo |
-| **src/lib/sanitizeHtml.js** | `src/lib/sanitizeHtml.js` | مُطهر XSS (جديد) |
-| **src/pages/Contact.jsx** | `src/pages/Contact.jsx` | تحديث الإيميل |
-| **src/pages/PrivacyPolicy.jsx** | `src/pages/PrivacyPolicy.jsx` | تحديث الإيميل |
-| **src/pages/TermsOfService.jsx** | `src/pages/TermsOfService.jsx` | تحديث الإيميل |
-| **src/App.jsx** | `src/App.jsx` | إصلاح AdminNotifications |
-| **src/SECURITY_NOTES.md** | `src/SECURITY_NOTES.md` | توثيق أمني محدّث |
-| **src/ADMIN_SECURITY.md** | `src/ADMIN_SECURITY.md` | دليل الإدارة |
-| **supabase/functions/send-push/index.ts** | `supabase/functions/send-push/index.ts` | Edge Function محمي |
-| **base44/functions/bootstrapAdminAccess/entry.ts** | `base44/functions/bootstrapAdminAccess/entry.ts` | Super Admin check |
-| **base44/functions/getAdminAccessState/entry.ts** | `base44/functions/getAdminAccessState/entry.ts` | Timing-safe token |
-| **hellostaff_security_patch.sql** | (جذر المشروع أو في Supabase) | RLS + RPC fixes |
-| **hellostaff_security_report.md** | (مجلد docs/) | التقرير الأمني |
-| **IMPLEMENTATION_GUIDE.md** | (مجلد docs/) | دليل التنفيذ |
+### حذفات
+- ✅ حذف مجلد `base44/` بالكامل (22 function + 23 entity)
+- ✅ حذف `src/PHASE_42_ARCHITECTURE.md` (يتحدث عن Firebase)
+- ✅ حذف كل إشارات `base44` و `Firebase` في التعليقات والتوثيق
+
+### Edge Functions جديدة (Supabase Native)
+| الدالة | المسار | الغرض |
+|--------|--------|-------|
+| `send-push` | `supabase/functions/send-push/index.ts` | Push notifications (محمية) |
+| `bootstrap-admin-access` | `supabase/functions/bootstrap-admin-access/index.ts` | ترقية Super Admin |
+| `admin-access-check` | `supabase/functions/admin-access-check/index.ts` | التحقق من صلاحية Admin |
+| `admin-dashboard` | `supabase/functions/admin-dashboard/index.ts` | إحصائيات Dashboard |
+| `admin-users` | `supabase/functions/admin-users/index.ts` | قائمة المستخدمين |
+| `admin-stats` | `supabase/functions/admin-stats/index.ts` | إحصائيات مفصلة |
+| `admin-seed-demo` | `supabase/functions/admin-seed-demo/index.ts` | إنشاء بيانات تجريبية |
+| `admin-clear-demo` | `supabase/functions/admin-clear-demo/index.ts` | حذف بيانات تجريبية |
+| `rate-limiter` | `supabase/functions/rate-limiter/index.ts` | Rate limiting server-side |
+
+### ملفات src معدلة
+| الملف | الإصلاح |
+|-------|---------|
+| `src/lib/supabaseClient.js` | إزالة fallback الخطير |
+| `src/lib/adminService.js` | assertAdmin ثنائي الطبقة (async + server check) |
+| `src/lib/services/jobService.js` | حماية deleteJob/updateJob |
+| `src/lib/services/applicationService.js` | حماية التطبيقات والرسائل |
+| `src/lib/services/notificationService.js` | حماية الإشعارات |
+| `src/lib/storeService.js` | التحقق من الأسعار من الخادم |
+| `src/lib/storageService.js` | whitelist MIME types |
+| `src/lib/demoData.js` | إزالة localStorage demo mode |
+| `src/lib/sanitizeHtml.js` | مُطهر XSS (جديد) |
+| `src/lib/notificationHelpers.js` | تغيير handleFirebaseError → handleSupabaseError |
+| `src/hooks/useSavedJobs.js` | تغيير firebaseUser → user |
+| `src/pages/Contact.jsx` | تحديث الإيميل إلى staffps.com |
+| `src/pages/PrivacyPolicy.jsx` | تحديث الإيميل إلى staffps.com |
+| `src/pages/TermsOfService.jsx` | تحديث الإيميل إلى staffps.com |
+| `src/App.jsx` | إصلاح AdminNotifications route |
+| `src/SECURITY_NOTES.md` | توثيق أمني محدّث (Supabase) |
+| `src/ADMIN_SECURITY.md` | دليل الإدارة (Supabase) |
+| `src/components/AdminProtectedRoute.jsx` | إزالة إشارات base44 |
+| `vercel.json` | إضافة CSP Headers |
+
+### ملف SQL
+| الملف | المحتوى |
+|-------|---------|
+| `hellostaff_security_patch.sql` | RLS لـ 25+ جدول + RPC functions (idempotent, fault-tolerant) |
 
 ---
 
 ## كيفية التطبيق
 
-### الطريقة السريعة (موصى بها)
-
-1. افتح Terminal في مجلد مشروعك:
+### 1. فك الضغط
 ```bash
-cd /path/to/hellostaff.ps
+unzip hellostaff-security-fixes.zip
+cd hellostaff-security-fixes
 ```
 
-2. أنسخ الملفات:
+### 2. نسخ الملفات
 ```bash
-# على Linux/Mac:
-cp -r /path/to/hellostaff-security-fixes/src/* src/
-cp -r /path/to/hellostaff-security-fixes/supabase/functions/* supabase/functions/
-cp -r /path/to/hellostaff-security-fixes/base44/functions/* base44/functions/
-cp /path/to/hellostaff-security-fixes/hellostaff_security_patch.sql .
+# نفترض أن مشروعك في ../hellostaff.ps
+
+# نسخ src/
+cp -r src/* ../hellostaff.ps/src/
+
+# نسخ Edge Functions
+cp -r supabase/functions/* ../hellostaff.ps/supabase/functions/
+
+# نسخ vercel.json
+cp vercel.json ../hellostaff.ps/
+
+# نسخ SQL
+cp hellostaff_security_patch.sql ../hellostaff.ps/
 ```
 
-أو على Windows (PowerShell):
-```powershell
-Copy-Item -Path "C:\Users\YourName\Downloads\hellostaff-security-fixes\src\*" -Destination "src\" -Recurse -Force
-Copy-Item -Path "C:\Users\YourName\Downloads\hellostaff-security-fixes\supabase\functions\*" -Destination "supabase\functions\" -Recurse -Force
-Copy-Item -Path "C:\Users\YourName\Downloads\hellostaff-security-fixes\base44\functions\*" -Destination "base44\functions\" -Recurse -Force
-Copy-Item "C:\Users\YourName\Downloads\hellostaff-security-fixes\hellostaff_security_patch.sql" -Destination "."
-```
-
-3. ثبّت DOMPurify (اختياري):
+### 3. تثبيت gsap (إذا لم تكن مثبتة)
 ```bash
-npm install isomorphic-dompurify
+cd ../hellostaff.ps
+npm install gsap isomorphic-dompurify
 ```
 
-4. ارفع الكود:
+### 4. التحقق من حذف base44
+```bash
+# يجب أن لا يوجد مجلد base44
+ls base44  # ← يجب أن يظهر: No such file or directory
+
+# يجب أن لا توجد إشارات في src/
+grep -rn "base44" src/ || echo "Clean - no base44 references"
+```
+
+### 5. رفع الكود
 ```bash
 git add .
-git commit -m "Security hardening: RLS, XSS, admin auth, edge functions"
+git commit -m "Security hardening v2: Remove base44/Firebase, add Supabase Edge Functions, fix RLS/XSS/auth"
 git push origin main
 ```
 
-5. Vercel ينشر تلقائياً.
+### 6. نشر Edge Functions
+```bash
+supabase functions deploy send-push --project-ref YOUR_PROJECT_REF
+supabase functions deploy bootstrap-admin-access --project-ref YOUR_PROJECT_REF
+supabase functions deploy admin-access-check --project-ref YOUR_PROJECT_REF
+supabase functions deploy admin-dashboard --project-ref YOUR_PROJECT_REF
+supabase functions deploy admin-users --project-ref YOUR_PROJECT_REF
+supabase functions deploy admin-stats --project-ref YOUR_PROJECT_REF
+supabase functions deploy admin-seed-demo --project-ref YOUR_PROJECT_REF
+supabase functions deploy admin-clear-demo --project-ref YOUR_PROJECT_REF
+supabase functions deploy rate-limiter --project-ref YOUR_PROJECT_REF
+```
 
-6. شغّل ملف SQL في Supabase:
-   - افتح [supabase.com/dashboard](https://supabase.com/dashboard)
-   - Database → SQL Editor → New Query
-   - انسخ محتوى `hellostaff_security_patch.sql`
-   - اضغط Run
+### 7. تشغيل SQL
+1. افتح Supabase Dashboard → SQL Editor
+2. انسخ محتوى `hellostaff_security_patch.sql`
+3. اضغط Run
+
+### 8. ضبط Secrets
+```bash
+supabase secrets set \
+  VAPID_PUBLIC_KEY="your-key" \
+  VAPID_PRIVATE_KEY="your-key" \
+  VAPID_SUBJECT="mailto:support@staffps.com" \
+  ALLOWED_ORIGIN="https://www.staffps.com,https://staffps.com" \
+  SUPER_ADMIN_EMAIL="admin@staffps.com" \
+  --project-ref YOUR_PROJECT_REF
+```
 
 ---
 
 ## التحقق من النجاح
 
-```sql
--- في Supabase SQL Editor
-SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'public';
--- يجب أن يرجع 60+ (إذا كانت كل الجداول موجودة)
-```
-
 ```bash
-# في Terminal
+# التحقق من حذف base44
+grep -rn "base44" ../hellostaff.ps/src/ || echo "✅ base44 removed"
+
+# التحقق من Edge Functions
 supabase functions list --project-ref YOUR_PROJECT_REF
-# يجب أن يظهر: send-push
+
+# التحقق من RLS
+# (في Supabase SQL Editor)
+SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'public';
 ```
 
+---
+
+## ملاحظة مهمة
+
+**يجب حذف مجلد `base44/` من المشروع الأصلي يدوياً إذا كان لا يزال موجوداً:**
 ```bash
-# في Terminal
-supabase secrets list --project-ref YOUR_PROJECT_REF
-# يجب أن يظهر: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, ALLOWED_ORIGIN, SUPER_ADMIN_EMAIL
+rm -rf base44/
+git add base44/
+git commit -m "Remove base44 legacy code"
+git push origin main
 ```
