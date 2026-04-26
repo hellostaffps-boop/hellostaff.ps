@@ -36,7 +36,7 @@ export const dismissToast = (id) => {
 /**
  * Handle generic errors with user-friendly messages
  */
-export const handleFirebaseError = (error, t, context = "") => {
+export const handleSupabaseError = (error, t, context = "") => {
   console.error(`Error in ${context}:`, error);
   const message = t ? t("errors", "generic") : "Something went wrong. Please try again.";
   showError(message);

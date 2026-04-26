@@ -4,7 +4,6 @@ import { useAuth } from '@/lib/supabaseAuth';
 
 /**
  * AdminProtectedRoute — Verifies platform_admin role via Supabase profile.
- * No more base44 functions or localStorage session tokens.
  */
 export default function AdminProtectedRoute({ children }) {
   const { user, userProfile, loading } = useAuth();

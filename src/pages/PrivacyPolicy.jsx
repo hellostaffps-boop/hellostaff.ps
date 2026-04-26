@@ -100,7 +100,7 @@ Your continued use of Hello Staff after changes constitutes acceptance of the up
       title: "9. Contact Us",
       content: `If you have questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact us:
 
-• **Email:** privacy@hellostaff.ps
+• **Email:** privacy@staffps.com
 • **Contact Page:** [Contact Us](/contact)
 • **Address:** Ramallah, Palestine
 
@@ -213,11 +213,14 @@ We aim to respond to all privacy-related inquiries within 48 business hours.`
   ]
 };
 
+import { sanitizeMarkdownHtml } from "@/lib/sanitizeHtml";
+
 function renderMarkdown(text) {
-  return text
+  const rawHtml = text
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-accent underline hover:text-accent/80">$1</a>')
     .replace(/\n/g, '<br/>');
+  return sanitizeMarkdownHtml(rawHtml);
 }
 
 export default function PrivacyPolicy() {

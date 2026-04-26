@@ -78,7 +78,7 @@ const AdminSubscriptions       = lazy(() => import('./pages/admin/Subscriptions'
 const AdminPaymentSettings     = lazy(() => import('./pages/admin/PaymentSettings'));
 const AdminReports             = lazy(() => import('./pages/admin/Reports'));
 const AdminTestimonials        = lazy(() => import('./pages/admin/TestimonialsManagement'));
-const AdminNotifications       = lazy(() => import('./pages/candidate/Notifications'));
+const AdminNotifications       = lazy(() => import('./pages/admin/AdminBroadcast')); // Fixed: was pointing to candidate/Notifications
 const AdminBroadcast           = lazy(() => import('./pages/admin/AdminBroadcast'));
 const AdminAcademy             = lazy(() => import('./pages/admin/AdminAcademy'));
 const AdminStore               = lazy(() => import('./pages/admin/AdminStore'));

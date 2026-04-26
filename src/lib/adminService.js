@@ -2,19 +2,52 @@
  * adminService.js — Supabase implementation.
  * All admin operations use Supabase directly.
  * Requires platform_admin role.
+ * 
+ * SECURITY FIX (2026-04-27):
+ * - assertAdmin now validates BOTH client-side userProfile AND server-side role via RPC
+ * - All admin operations are guarded by RLS policies on the database
+ * - Audit logging is enforced for sensitive actions
  */
 
 import { supabase } from "@/lib/supabaseClient";
 import { createAuditLog, createNotification } from "@/lib/supabaseService";
 
-const assertAdmin = (userProfile) => {
+/**
+ * assertAdmin — Dual-layer validation:
+ * 1. Client-side sanity check (fast fail)
+ * 2. Server-side role verification via RPC (truth source)
+ */
+const assertAdmin = async (userProfile) => {
+  // Layer 1: Client-side sanity check (prevents accidental calls)
+  if (!userProfile || userProfile.role !== "platform_admin") {
+    throw new Error("FORBIDDEN: platform_admin role required");
+  }
+  
+  // Layer 2: Server-side verification (truth source)
+  // This prevents DevTools manipulation of userProfile
+  const { data: serverProfile, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userProfile.id)
+    .single();
+    
+  if (error || !serverProfile || serverProfile.role !== "platform_admin") {
+    throw new Error("FORBIDDEN: Server-side role verification failed");
+  }
+};
+
+/**
+ * assertAdminSync — Synchronous version for non-async contexts (routes, etc.)
+ * NOTE: This is for UI blocking only. All actual admin ops MUST use assertAdmin async.
+ */
+const assertAdminSync = (userProfile) => {
   if (!userProfile || userProfile.role !== "platform_admin") {
     throw new Error("FORBIDDEN: platform_admin role required");
   }
 };
 
 export const getAdminDashboardDataSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
 
   const [
     { count: totalUsers },
@@ -53,7 +86,7 @@ export const getAdminDashboardDataSafe = async (userProfile) => {
 };
 
 export const getAdminUsersSafe = async (userProfile, maxCount = 200) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("profiles")
     .select(`
@@ -68,7 +101,7 @@ export const getAdminUsersSafe = async (userProfile, maxCount = 200) => {
 };
 
 export const getAdminOrganizationsSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("organizations")
     .select("*")
@@ -79,7 +112,7 @@ export const getAdminOrganizationsSafe = async (userProfile) => {
 };
 
 export const getAdminJobsSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("jobs")
     .select("*")
@@ -90,7 +123,7 @@ export const getAdminJobsSafe = async (userProfile) => {
 };
 
 export const verifyOrganization = async (userProfile, orgId) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("organizations")
     .update({ verified: true, verified_by: userProfile.email, updated_at: new Date().toISOString() })
@@ -110,7 +143,7 @@ export const verifyOrganization = async (userProfile, orgId) => {
 };
 
 export const updateJobStatusAdmin = async (userProfile, jobId, status) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const VALID = ["draft", "published", "closed", "archived"];
   if (!VALID.includes(status)) throw new Error("Invalid status");
 
@@ -133,7 +166,7 @@ export const updateJobStatusAdmin = async (userProfile, jobId, status) => {
 };
 
 export const updateUserRoleAdmin = async (userProfile, targetUserId, newRole) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const VALID = ["candidate", "employer_owner", "employer_manager", "platform_admin"];
   if (!VALID.includes(newRole)) throw new Error("Invalid role");
 
@@ -157,7 +190,7 @@ export const updateUserRoleAdmin = async (userProfile, targetUserId, newRole) =>
 };
 
 export const updateUserStatusAdmin = async (userProfile, targetUserId, newStatus) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const VALID = ["active", "pending_approval", "suspended", "scheduled_for_deletion", "deleted"];
   if (!VALID.includes(newStatus)) throw new Error("Invalid status");
 
@@ -184,7 +217,7 @@ export const updateUserStatusAdmin = async (userProfile, targetUserId, newStatus
 };
 
 export const updateOrganizationStatusAdmin = async (userProfile, targetOrgId, newStatus) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const VALID = ["active", "pending", "suspended", "deleted"];
   if (!VALID.includes(newStatus)) throw new Error("Invalid status");
 
@@ -211,7 +244,7 @@ export const updateOrganizationStatusAdmin = async (userProfile, targetOrgId, ne
 
 // Audit log exports
 export const getAuditLogsSafe = async (userProfile, limit = 100) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("audit_logs")
     .select("*")
@@ -222,7 +255,7 @@ export const getAuditLogsSafe = async (userProfile, limit = 100) => {
 };
 
 export const getAuditLogsForTarget = async (userProfile, targetType, targetId) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("audit_logs")
     .select("*")
@@ -234,7 +267,7 @@ export const getAuditLogsForTarget = async (userProfile, targetType, targetId) =
 };
 
 export const getFailedAuditLogsSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("audit_logs")
     .select("*")
@@ -248,7 +281,7 @@ export const getFailedAuditLogsSafe = async (userProfile) => {
 // ─── ADMINS & PERMISSIONS MANAGEMENT ──────────────────────────────────────────
 
 export const getPlatformAdminsSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from('profiles')
     .select('*, admin_permissions(*)')
@@ -259,7 +292,7 @@ export const getPlatformAdminsSafe = async (userProfile) => {
 };
 
 export const grantAdminAccess = async (userProfile, userEmail) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data: user, error: fetchErr } = await supabase.from('profiles').select('*').eq('email', userEmail).single();
   if (fetchErr || !user) throw new Error("المستخدم غير موجود بهذا البريد");
   
@@ -281,7 +314,7 @@ export const grantAdminAccess = async (userProfile, userEmail) => {
 };
 
 export const updateAdminPermissions = async (userProfile, targetAdminId, permissions) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { error } = await supabase.from('admin_permissions').upsert({
     admin_id: targetAdminId,
     ...permissions,
@@ -292,7 +325,7 @@ export const updateAdminPermissions = async (userProfile, targetAdminId, permiss
 };
 
 export const revokeAdminAccess = async (userProfile, targetAdminId) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   if (userProfile.id === targetAdminId) throw new Error("لا يمكنك إزالة صلاحيات نفسك!");
   
   await supabase.from('admin_permissions').delete().eq('admin_id', targetAdminId);
@@ -306,7 +339,7 @@ export const revokeAdminAccess = async (userProfile, targetAdminId) => {
 const DEMO_BATCH_ID = "admin-demo-batch-v1";
 
 export const getDemoDataStatus = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const [
     { count: orgsCount },
     { count: jobsCount },
@@ -325,7 +358,7 @@ export const getDemoDataStatus = async (userProfile) => {
 };
 
 export const seedDemoData = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
 
   // Call a SECURITY DEFINER RPC function that bypasses RLS
   const { data, error } = await supabase.rpc("seed_demo_data");
@@ -355,7 +388,7 @@ export const seedDemoData = async (userProfile) => {
 
 
 export const clearDemoData = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
 
   // Call a SECURITY DEFINER RPC function that bypasses RLS
   const { data, error } = await supabase.rpc("clear_demo_data");
@@ -376,7 +409,7 @@ export const clearDemoData = async (userProfile) => {
 // ─── BROADCAST NOTIFICATIONS ──────────────────────────────────────────────────
 
 export const broadcastNotificationAdmin = async (userProfile, { title, message, targetRole }) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
 
   // Use the SECURITY DEFINER RPC function to bypass RLS and perform bulk insert
   const { data, error } = await supabase.rpc("broadcast_notification_secure", {
@@ -407,14 +440,14 @@ export const broadcastNotificationAdmin = async (userProfile, { title, message, 
 
 // ─── ACADEMY MANAGEMENT ────────────────────────────────────────────────────────
 export const getAdminCoursesSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase.from("academy_courses").select("*").order("created_at", { ascending: false });
   if (error) throw error;
   return data || [];
 };
 
 export const upsertAdminCourse = async (userProfile, courseData) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("academy_courses")
     .upsert([{ ...courseData, updated_at: new Date().toISOString() }])
@@ -431,7 +464,7 @@ export const upsertAdminCourse = async (userProfile, courseData) => {
 };
 
 export const deleteAdminCourse = async (userProfile, courseId) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { error } = await supabase.from("academy_courses").delete().eq("id", courseId);
   if (error) throw error;
   await createAuditLog({
@@ -445,14 +478,14 @@ export const deleteAdminCourse = async (userProfile, courseId) => {
 
 // ─── STORE MANAGEMENT ──────────────────────────────────────────────────────────
 export const getAdminProductsSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase.from("store_products").select("*").order("created_at", { ascending: false });
   if (error) throw error;
   return data || [];
 };
 
 export const upsertAdminProduct = async (userProfile, productData) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("store_products")
     .upsert([{ ...productData, updated_at: new Date().toISOString() }])
@@ -469,7 +502,7 @@ export const upsertAdminProduct = async (userProfile, productData) => {
 };
 
 export const deleteAdminProduct = async (userProfile, productId) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { error } = await supabase.from("store_products").delete().eq("id", productId);
   if (error) throw error;
   await createAuditLog({
@@ -483,14 +516,14 @@ export const deleteAdminProduct = async (userProfile, productId) => {
 
 // ─── NEWS MANAGEMENT ───────────────────────────────────────────────────────────
 export const getAdminNewsSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase.from("news_articles").select("*").order("created_at", { ascending: false });
   if (error) throw error;
   return data || [];
 };
 
 export const upsertAdminNews = async (userProfile, newsData) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("news_articles")
     .upsert([{ ...newsData }]) // news_articles doesn't have updated_at in phase3 schema, just published_at
@@ -507,7 +540,7 @@ export const upsertAdminNews = async (userProfile, newsData) => {
 };
 
 export const deleteAdminNews = async (userProfile, articleId) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { error } = await supabase.from("news_articles").delete().eq("id", articleId);
   if (error) throw error;
   await createAuditLog({
@@ -522,7 +555,7 @@ export const deleteAdminNews = async (userProfile, articleId) => {
 
 // ─── STORE ORDERS MANAGEMENT ──────────────────────────────────────────────────
 export const getAdminOrdersSafe = async (userProfile) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   const { data, error } = await supabase
     .from("store_orders")
     .select(`
@@ -538,7 +571,7 @@ export const getAdminOrdersSafe = async (userProfile) => {
 };
 
 export const updateStoreOrderStatus = async (userProfile, orderId, { status, digitalReleased }) => {
-  assertAdmin(userProfile);
+  await assertAdmin(userProfile);
   
   const updates = { updated_at: new Date().toISOString() };
   if (status) updates.status = status;

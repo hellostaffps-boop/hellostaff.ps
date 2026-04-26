@@ -136,7 +136,7 @@ The language of proceedings shall be Arabic or English, as agreed by the parties
       title: "11. Contact Information",
       content: `For questions or concerns about these Terms of Service:
 
-• **Email:** legal@hellostaff.ps
+• **Email:** legal@staffps.com
 • **Contact Page:** [Contact Us](/contact)
 • **Address:** Ramallah, Palestine
 
@@ -285,11 +285,14 @@ We aim to respond to all inquiries within 48 business hours.`
   ]
 };
 
+import { sanitizeMarkdownHtml } from "@/lib/sanitizeHtml";
+
 function renderMarkdown(text) {
-  return text
+  const rawHtml = text
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-accent underline hover:text-accent/80">$1</a>')
     .replace(/\n/g, '<br/>');
+  return sanitizeMarkdownHtml(rawHtml);
 }
 
 export default function TermsOfService() {
