@@ -9,6 +9,7 @@ import { Loader2, Plus, Users, CalendarClock, CheckCircle, XCircle } from "lucid
 import { toast } from "sonner";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { getStatusBadgeClass } from "@/lib/uiHelpers";
+import { sendPipelineStatusNotification } from "@/lib/services/pipelineNotifications";
 
 const PIPELINE_STAGES = [
   { id: "submitted", label: "New", icon: Users, color: "bg-blue-50 border-blue-200 text-blue-700" },
@@ -41,9 +42,20 @@ export default function ApplicantPipeline() {
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }) => updateApplicationStatus(user.email, id, status),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["employer-applications"] });
       toast.success(t("appManagement", "statusUpdated") || "Status updated");
+      // Auto-notify the candidate about the stage change
+      const app = applications.find(a => a.id === variables.id);
+      if (app) {
+        sendPipelineStatusNotification({
+          candidateEmail: app.candidate_email,
+          candidateName: app.candidate_name,
+          jobTitle: app.job_title,
+          newStatus: variables.status,
+          applicationId: variables.id,
+        });
+      }
     },
     onError: () => toast.error(t("appManagement", "statusError") || "Error updating status"),
   });

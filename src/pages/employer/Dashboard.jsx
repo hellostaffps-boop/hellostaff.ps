@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Briefcase, FileText, Users, Eye, UserPlus, Building2, CheckCircle2, ShieldCheck, Zap, Crown } from "lucide-react";
+import EmployerWelcomeBanner from "@/components/EmployerWelcomeBanner";
 
 const JOB_STATUS = {
   published: { color: "bg-green-50 text-green-700 border-green-200",  dot: "bg-green-500",  label: "Published" },
@@ -125,6 +126,9 @@ export default function Dashboard() {
           </Button>
         </Link>
       </PageHeader>
+
+      {/* Welcome banner for new employers with no jobs */}
+      {jobs.length === 0 && <EmployerWelcomeBanner orgName={org?.name} />}
 
       {/* Org completion widget */}
       {orgCompletion.score < 80 && (
