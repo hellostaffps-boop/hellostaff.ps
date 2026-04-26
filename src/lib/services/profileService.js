@@ -4,7 +4,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import { getCandidateCompletion } from "@/lib/profileCompletion";
 
-const PROTECTED_FIELDS = ["role", "status", "is_admin", "admin_notes", "created_at", "uid"];
+const PROTECTED_FIELDS = ["role", "status", "is_admin", "admin_notes", "created_at", "uid", "availability"];
 const stripProtectedFields = (data) => {
   const safe = { ...data };
   PROTECTED_FIELDS.forEach((f) => delete safe[f]);

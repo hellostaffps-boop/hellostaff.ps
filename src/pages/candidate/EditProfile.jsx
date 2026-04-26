@@ -37,7 +37,7 @@ export default function EditProfile() {
 
   const [form, setForm] = useState({
     headline: "", bio: "", phone: "", city: "",
-    preferred_roles: [], years_experience: "", availability: "flexible",
+    preferred_roles: [], years_experience: "",
     skills: [], cv_url: "",
     work_experience: [],
     education: [],
@@ -64,7 +64,6 @@ export default function EditProfile() {
           city: existing.city || "",
           preferred_roles: existing.preferred_roles || [],
           years_experience: existing.years_experience?.toString() || "",
-          availability: existing.availability || "flexible",
           skills: existing.skills || [],
           cv_url: existing.cv_url || "",
           work_experience: existing.work_experience || [],
