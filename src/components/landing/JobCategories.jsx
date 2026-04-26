@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
 import { getJobCountsByType } from "@/lib/supabaseService";
+import { IS_DEMO, DEMO_CATEGORY_COUNTS } from "@/lib/demoData";
 
 const categoryData = [
   { key: "barista",    i18nKey: "barista",       icon: Coffee },
@@ -23,7 +24,10 @@ export default function JobCategories() {
     queryKey: ["job-type-counts"],
     queryFn: getJobCountsByType,
     staleTime: 1000 * 60 * 10, // 10 minutes
+    initialData: IS_DEMO ? DEMO_CATEGORY_COUNTS : undefined,
   });
+
+  const displayCounts = IS_DEMO ? DEMO_CATEGORY_COUNTS : counts;
 
   const handleCategoryClick = (jobTypeKey) => {
     navigate(`/jobs?type=${jobTypeKey}`);
@@ -44,7 +48,7 @@ export default function JobCategories() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {categoryData.map((cat) => {
             const Icon = cat.icon;
-            const count = counts[cat.key] || 0;
+            const count = displayCounts[cat.key] || 0;
             return (
               <div
                 key={cat.key}

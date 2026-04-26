@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { getTopRatedEmployees } from "@/lib/supabaseService";
+import { IS_DEMO, DEMO_EMPLOYEES } from "@/lib/demoData";
 import { Star, MapPin, Award } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -13,11 +14,16 @@ const TopEmployeesSection = () => {
   useEffect(() => {
     async function fetchEmployees() {
       try {
+        if (IS_DEMO) {
+          setEmployees(DEMO_EMPLOYEES);
+          setLoading(false);
+          return;
+        }
         const data = await getTopRatedEmployees(4);
         setEmployees(data || []);
       } catch (error) {
         console.error("Error fetching top employees:", error);
-        setEmployees([]);
+        setEmployees(IS_DEMO ? DEMO_EMPLOYEES : []);
       } finally {
         setLoading(false);
       }

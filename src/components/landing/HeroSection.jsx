@@ -34,7 +34,10 @@ export default function HeroSection() {
     queryKey: ["platform-stats"],
     queryFn: getPlatformStats,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    initialData: IS_DEMO ? DEMO_STATS : undefined,
   });
+  
+  const displayStats = IS_DEMO ? DEMO_STATS : (stats || { jobs: 0, candidates: 0, organizations: 0 });
   
   return (
     <section className="relative overflow-hidden">
@@ -89,21 +92,21 @@ export default function HeroSection() {
           <motion.div variants={fadeUp} className="mt-20 flex items-center justify-center gap-8 text-sm text-muted-foreground border-t border-border/50 pt-10 px-4 flex-wrap">
             <div className="text-center min-w-[120px]">
               <div className="text-3xl font-bold text-foreground mb-1 flex justify-center items-center">
-                <AnimatedCounter value={stats?.jobs || 0} />+
+                <AnimatedCounter value={displayStats.jobs} />+
               </div>
               <div className="font-medium text-xs tracking-wider uppercase">{t("hero", "activeJobs")}</div>
             </div>
             <div className="hidden sm:block w-px h-12 bg-border/80" />
             <div className="text-center min-w-[120px]">
               <div className="text-3xl font-bold text-foreground mb-1 flex justify-center items-center">
-                <AnimatedCounter value={stats?.candidates || 0} />+
+                <AnimatedCounter value={displayStats.candidates} />+
               </div>
               <div className="font-medium text-xs tracking-wider uppercase">{t("hero", "workers")}</div>
             </div>
             <div className="hidden sm:block w-px h-12 bg-border/80" />
             <div className="text-center min-w-[120px]">
               <div className="text-3xl font-bold text-foreground mb-1 flex justify-center items-center">
-                <AnimatedCounter value={stats?.organizations || 0} />+
+                <AnimatedCounter value={displayStats.organizations} />+
               </div>
               <div className="font-medium text-xs tracking-wider uppercase">{t("hero", "businesses")}</div>
             </div>
