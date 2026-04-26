@@ -69,6 +69,7 @@ export default function EmployerLayout() {
     { label: t("dashboard", "postJob"), path: "/employer/post-job", icon: PlusCircle },
     { label: t("dashboard", "manageJobs"), path: "/employer/jobs", icon: Briefcase },
     { label: t("dashboard", "applications"), path: "/employer/applications", icon: FileText },
+    { label: lang === "ar" ? "لوحة التوظيف" : "Pipeline", path: "/employer/pipeline", icon: Users },
     { label: t("dashboard", "team"), path: "/employer/team", icon: Users },
     { label: lang === "ar" ? "التحليلات" : "Analytics", path: "/employer/analytics", icon: BarChart3 },
     { label: t("dashboard", "notifications"), path: "/employer/notifications", icon: Bell, badge: unreadCount },

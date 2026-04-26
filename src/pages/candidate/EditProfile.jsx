@@ -41,6 +41,9 @@ export default function EditProfile() {
     skills: [], cv_url: "",
     work_experience: [],
     education: [],
+    whatsapp_number: "", current_status: "open_to_offers", desired_job_type: "full_time",
+    expected_salary_min: "", expected_salary_max: "",
+    has_transport: false, intro_video_url: ""
   });
 
   const { data: existing, isSuccess } = useQuery({
@@ -66,6 +69,13 @@ export default function EditProfile() {
           cv_url: existing.cv_url || "",
           work_experience: existing.work_experience || [],
           education: existing.education || [],
+          whatsapp_number: existing.whatsapp_number || "",
+          current_status: existing.current_status || "open_to_offers",
+          desired_job_type: existing.desired_job_type || "full_time",
+          expected_salary_min: existing.expected_salary_min || "",
+          expected_salary_max: existing.expected_salary_max || "",
+          has_transport: existing.has_transport || false,
+          intro_video_url: existing.intro_video_url || "",
         });
       }
       isInitialized.current = true;
@@ -143,6 +153,8 @@ export default function EditProfile() {
       const data = {
         ...form,
         years_experience: form.years_experience ? Number(form.years_experience) : 0,
+        expected_salary_min: form.expected_salary_min ? Number(form.expected_salary_min) : null,
+        expected_salary_max: form.expected_salary_max ? Number(form.expected_salary_max) : null,
       };
       await saveCandidateProfile(user.id, user.email, data);
       queryClient.invalidateQueries({ queryKey: ["my-candidate-profile"] });
@@ -188,6 +200,11 @@ export default function EditProfile() {
                 onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1.5" />
             </div>
             <div>
+              <Label className="text-sm">{lang === "ar" ? "رقم الواتساب" : "WhatsApp Number"}</Label>
+              <Input placeholder={lang === "ar" ? "رقم الواتساب للتواصل" : "WhatsApp for contact"} value={form.whatsapp_number}
+                onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })} className="mt-1.5" />
+            </div>
+            <div className="sm:col-span-2">
               <Label className="text-sm">{t("editProfile", "location")}</Label>
               <Select value={form.city} onValueChange={(v) => setForm({ ...form, city: v })}>
                 <SelectTrigger className="mt-1.5"><SelectValue placeholder={t("editProfile", "locationPlaceholder")} /></SelectTrigger>
@@ -226,6 +243,62 @@ export default function EditProfile() {
             <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleCVUpload} />
           </div>
           <p className="text-xs text-muted-foreground">{lang === "ar" ? "الصيغ المدعومة: PDF, DOC, DOCX (حجم أقصى 20 ميجابايت)" : "Supported formats: PDF, DOC, DOCX (Max 20MB)"}</p>
+        </div>
+
+        {/* Job Preferences (SaaS Upgrade) */}
+        <div className={sectionClass}>
+          <h3 className="font-semibold text-sm">{lang === "ar" ? "التفضيلات الوظيفية" : "Job Preferences"}</h3>
+          
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm">{lang === "ar" ? "الحالة الحالية" : "Current Status"}</Label>
+              <Select value={form.current_status} onValueChange={(v) => setForm({ ...form, current_status: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="actively_looking">{lang === "ar" ? "أبحث بنشاط" : "Actively looking"}</SelectItem>
+                  <SelectItem value="open_to_offers">{lang === "ar" ? "منفتح للعروض" : "Open to offers"}</SelectItem>
+                  <SelectItem value="not_looking">{lang === "ar" ? "لا أبحث حالياً" : "Not looking"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm">{lang === "ar" ? "نوع الوظيفة المرغوبة" : "Desired Job Type"}</Label>
+              <Select value={form.desired_job_type} onValueChange={(v) => setForm({ ...form, desired_job_type: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full_time">{lang === "ar" ? "دوام كامل" : "Full Time"}</SelectItem>
+                  <SelectItem value="part_time">{lang === "ar" ? "دوام جزئي" : "Part Time"}</SelectItem>
+                  <SelectItem value="shift">{lang === "ar" ? "نظام شفتات" : "Shifts"}</SelectItem>
+                  <SelectItem value="temporary">{lang === "ar" ? "مؤقت" : "Temporary"}</SelectItem>
+                  <SelectItem value="internship">{lang === "ar" ? "تدريب" : "Internship"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm">{lang === "ar" ? "الراتب المتوقع (الحد الأدنى)" : "Expected Salary (Min)"}</Label>
+              <Input type="number" placeholder="e.g. 3000" value={form.expected_salary_min}
+                onChange={(e) => setForm({ ...form, expected_salary_min: e.target.value })} className="mt-1.5" />
+            </div>
+            <div>
+              <Label className="text-sm">{lang === "ar" ? "الراتب المتوقع (الحد الأقصى)" : "Expected Salary (Max)"}</Label>
+              <Input type="number" placeholder="e.g. 5000" value={form.expected_salary_max}
+                onChange={(e) => setForm({ ...form, expected_salary_max: e.target.value })} className="mt-1.5" />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-sm">{lang === "ar" ? "رابط فيديو تعريفي (اختياري)" : "Intro Video URL (Optional)"}</Label>
+            <Input placeholder="https://youtube.com/..." value={form.intro_video_url}
+              onChange={(e) => setForm({ ...form, intro_video_url: e.target.value })} className="mt-1.5" />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm cursor-pointer mt-2">
+            <Checkbox checked={form.has_transport} onCheckedChange={(v) => setForm({ ...form, has_transport: v })} />
+            {lang === "ar" ? "أمتلك وسيلة نقل خاصة" : "I have personal transportation"}
+          </label>
         </div>
 
         {/* Skills */}

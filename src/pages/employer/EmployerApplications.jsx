@@ -12,6 +12,7 @@ import { getEmployerProfile, getApplicationsByOrg, getJobsByOrg, updateApplicati
 
 import { getInterviewsForApplications } from "@/lib/interviewService";
 import InterviewScheduleModal from "@/components/InterviewScheduleModal";
+import TrialShiftScheduleModal from "@/components/TrialShiftScheduleModal";
 import InterviewNotesModal from "@/components/InterviewNotesModal";
 import VideoCallModal from "@/components/VideoCallModal.jsx";
 import CandidateRankingModal from "@/components/CandidateRankingModal.jsx";
@@ -36,6 +37,7 @@ export default function EmployerApplications() {
   const [statusTab, setStatusTab] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
   const [scheduleApp, setScheduleApp] = useState(null);
+  const [trialShiftApp, setTrialShiftApp] = useState(null);
   const [notesApp, setNotesApp] = useState(null);
   const [videoApp, setVideoApp] = useState(null);
   const [rankingJob, setRankingJob] = useState(null);
@@ -253,8 +255,19 @@ export default function EmployerApplications() {
                       <CalendarClock className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">
                         {interview?.scheduled_at
-                          ? (ar ? "إعادة جدولة" : "Reschedule")
-                          : (ar ? "جدولة مقابلة" : "Schedule")}
+                          ? (ar ? "إعادة جدولة المقابلة" : "Reschedule")
+                          : (ar ? "جدولة مقابلة" : "Schedule Interview")}
+                      </span>
+                    </button>
+
+                    {/* Schedule Trial Shift */}
+                    <button
+                      onClick={() => setTrialShiftApp(app)}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-amber-600 transition-colors h-8 px-2 rounded-md border border-border hover:border-amber-600/30"
+                    >
+                      <CalendarClock className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">
+                        {ar ? "تجربة عمل" : "Trial Shift"}
                       </span>
                     </button>
 
@@ -323,6 +336,13 @@ export default function EmployerApplications() {
           existingInterview={interviews[scheduleApp.id] || null}
           onClose={() => setScheduleApp(null)}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ["interviews"] })}
+        />
+      )}
+      {trialShiftApp && (
+        <TrialShiftScheduleModal
+          application={trialShiftApp}
+          onClose={() => setTrialShiftApp(null)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["employer-applications"] })}
         />
       )}
       {notesApp && (

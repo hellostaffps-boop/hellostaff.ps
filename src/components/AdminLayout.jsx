@@ -77,6 +77,8 @@ export default function AdminLayout() {
     { label: isAr ? "المتجر" : "Store", path: "/admin/store", icon: Building2 },
     { label: isAr ? "الأخبار" : "News", path: "/admin/news", icon: MessageSquareQuote },
     { label: isAr ? "الهوية البصرية" : "Branding", path: "/admin/branding", icon: Palette },
+    { label: isAr ? "إدارة الشارات" : "Badges", path: "/admin/badges", icon: ShieldCheck },
+    { label: isAr ? "سجل الحركات" : "Audit Logs", path: "/admin/logs", icon: FileText },
     { label: isAr ? "الإشعارات" : "Notifications", path: "/admin/notifications", icon: Bell, badge: unreadCount },
   ];
 

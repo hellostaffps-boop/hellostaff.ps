@@ -56,6 +56,7 @@ const EmployerDashboard         = lazy(() => import('./pages/employer/Dashboard'
 const PostJob                   = lazy(() => import('./pages/employer/PostJob'));
 const ManageJobs                = lazy(() => import('./pages/employer/ManageJobs'));
 const EmployerApplications      = lazy(() => import('./pages/employer/EmployerApplications'));
+const ApplicantPipeline         = lazy(() => import('./pages/employer/ApplicantPipeline'));
 const EmployerApplicationDetail = lazy(() => import('./pages/employer/EmployerApplicationDetail'));
 const CompanyProfile            = lazy(() => import('./pages/employer/CompanyProfile'));
 const EmployerNotifications     = lazy(() => import('./pages/employer/Notifications'));
@@ -82,6 +83,8 @@ const AdminBroadcast           = lazy(() => import('./pages/admin/AdminBroadcast
 const AdminAcademy             = lazy(() => import('./pages/admin/AdminAcademy'));
 const AdminStore               = lazy(() => import('./pages/admin/AdminStore'));
 const AdminNews                = lazy(() => import('./pages/admin/AdminNews'));
+const AdminBadges              = lazy(() => import('./pages/admin/AdminBadges'));
+const AdminActionLogs          = lazy(() => import('./pages/admin/AdminActionLogs'));
 
 // Global loading fallback
 function PageLoader() {
@@ -145,6 +148,7 @@ const AuthenticatedApp = () => {
             <Route path="post-job" element={<PostJob />} />
             <Route path="jobs" element={<ManageJobs />} />
             <Route path="applications" element={<EmployerApplications />} />
+            <Route path="pipeline" element={<ApplicantPipeline />} />
             <Route path="applications/:id" element={<EmployerApplicationDetail />} />
             <Route path="notifications" element={<EmployerNotifications />} />
             <Route path="team" element={<TeamMembers />} />
@@ -178,6 +182,8 @@ const AuthenticatedApp = () => {
           <Route path="/admin/store" element={<AdminStore />} />
           <Route path="/admin/news" element={<AdminNews />} />
           <Route path="/admin/branding" element={<AdminBranding />} />
+          <Route path="/admin/badges" element={<AdminBadges />} />
+          <Route path="/admin/logs" element={<AdminActionLogs />} />
         </Route>
 
         <Route path="*" element={<PageNotFound />} />

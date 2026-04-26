@@ -11,3 +11,6 @@ export * from "@/lib/services/applicationService";
 export * from "@/lib/services/notificationService";
 export * from "@/lib/services/newsService";
 export * from "@/lib/services/miscService";
+export * from "@/lib/services/saasService";
+export * from "@/lib/services/aiService";
+export * from "@/lib/services/matchingService";

@@ -84,7 +84,7 @@ export default function HeroSection() {
             {!isCandidate && (
               <Link to={isEmployer ? "/employer" : "/auth/signup"}>
                 <Button size="lg" variant="outline" className="h-14 px-8 text-base border-2 rounded-xl transition-transform hover:scale-105 active:scale-95">
-                  {isEmployer ? (t("nav", "dashboard") || "لوحة التحكم") : t("hero", "postJob")}
+                  {isEmployer ? (t("nav", "dashboard") || "لوحة التحكم") : t("hero", "employer")}
                 </Button>
               </Link>
             )}
