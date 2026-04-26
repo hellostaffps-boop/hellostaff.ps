@@ -4,14 +4,6 @@ import { getTopRatedEmployees } from "@/lib/supabaseService";
 import { Star, MapPin, Award } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
-// Demo data to show when no real employees exist yet
-const DEMO_EMPLOYEES = [
-  { profile_id: "demo-1", full_name: "أحمد الخطيب", title: "باريستا محترف", city: "رام الله", average_rating: 5.0, review_count: 12, avatar_url: null },
-  { profile_id: "demo-2", full_name: "سارة عوض", title: "شيف معجنات", city: "بيت لحم", average_rating: 4.9, review_count: 8, avatar_url: null },
-  { profile_id: "demo-3", full_name: "عمر نصار", title: "نادل أول", city: "نابلس", average_rating: 4.8, review_count: 15, avatar_url: null },
-  { profile_id: "demo-4", full_name: "لينا حمدان", title: "مديرة مطعم", city: "الخليل", average_rating: 4.9, review_count: 10, avatar_url: null },
-];
-
 const TopEmployeesSection = () => {
   const { t, language } = useLanguage();
   const isRTL = language === "ar";
@@ -22,11 +14,10 @@ const TopEmployeesSection = () => {
     async function fetchEmployees() {
       try {
         const data = await getTopRatedEmployees(4);
-        // Use real data if available, otherwise show demo
-        setEmployees(data && data.length > 0 ? data : DEMO_EMPLOYEES);
+        setEmployees(data || []);
       } catch (error) {
         console.error("Error fetching top employees:", error);
-        setEmployees(DEMO_EMPLOYEES);
+        setEmployees([]);
       } finally {
         setLoading(false);
       }
@@ -34,7 +25,7 @@ const TopEmployeesSection = () => {
     fetchEmployees();
   }, []);
 
-  if (loading) return null;
+  if (loading || employees.length === 0) return null;
 
   return (
     <section className="py-24 relative overflow-hidden bg-app-bg">

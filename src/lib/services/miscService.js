@@ -57,3 +57,18 @@ export const getMyOrders = async (userEmail) => {
   }
   return data || [];
 };
+
+export const getPlatformStats = async () => {
+  // Use count: exact to get just the count without data
+  const [jobs, candidates, orgs] = await Promise.all([
+    supabase.from("jobs").select("*", { count: 'exact', head: true }).eq("status", "published"),
+    supabase.from("profiles").select("*", { count: 'exact', head: true }).eq("role", "candidate"),
+    supabase.from("organizations").select("*", { count: 'exact', head: true }).eq("status", "active"),
+  ]);
+
+  return {
+    jobs: jobs.count || 0,
+    candidates: candidates.count || 0,
+    organizations: orgs.count || 0,
+  };
+};

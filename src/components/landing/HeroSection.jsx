@@ -5,6 +5,8 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/lib/supabaseAuth";
 import { motion } from "framer-motion";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
+import { useQuery } from "@tanstack/react-query";
+import { getPlatformStats } from "@/lib/supabaseService";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -27,6 +29,12 @@ export default function HeroSection() {
   const role = userProfile?.role;
   const isEmployer = role === "employer_owner" || role === "employer_manager";
   const isCandidate = role === "candidate";
+
+  const { data: stats } = useQuery({
+    queryKey: ["platform-stats"],
+    queryFn: getPlatformStats,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
   
   return (
     <section className="relative overflow-hidden">
@@ -81,21 +89,21 @@ export default function HeroSection() {
           <motion.div variants={fadeUp} className="mt-20 flex items-center justify-center gap-8 text-sm text-muted-foreground border-t border-border/50 pt-10 px-4 flex-wrap">
             <div className="text-center min-w-[120px]">
               <div className="text-3xl font-bold text-foreground mb-1 flex justify-center items-center">
-                <AnimatedCounter value={2400} />+
+                <AnimatedCounter value={stats?.jobs || 0} />+
               </div>
               <div className="font-medium text-xs tracking-wider uppercase">{t("hero", "activeJobs")}</div>
             </div>
             <div className="hidden sm:block w-px h-12 bg-border/80" />
             <div className="text-center min-w-[120px]">
               <div className="text-3xl font-bold text-foreground mb-1 flex justify-center items-center">
-                <AnimatedCounter value={8500} />+
+                <AnimatedCounter value={stats?.candidates || 0} />+
               </div>
               <div className="font-medium text-xs tracking-wider uppercase">{t("hero", "workers")}</div>
             </div>
             <div className="hidden sm:block w-px h-12 bg-border/80" />
             <div className="text-center min-w-[120px]">
               <div className="text-3xl font-bold text-foreground mb-1 flex justify-center items-center">
-                <AnimatedCounter value={1200} />+
+                <AnimatedCounter value={stats?.organizations || 0} />+
               </div>
               <div className="font-medium text-xs tracking-wider uppercase">{t("hero", "businesses")}</div>
             </div>

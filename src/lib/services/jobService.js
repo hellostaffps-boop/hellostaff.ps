@@ -153,6 +153,21 @@ export const getRecentlyPostedJobs = async (count = 5) => {
   return data || [];
 };
 
+export const getJobCountsByType = async () => {
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("job_type")
+    .eq("status", "published");
+
+  if (error) throw error;
+  
+  const counts = {};
+  (data || []).forEach(j => {
+    if (j.job_type) counts[j.job_type] = (counts[j.job_type] || 0) + 1;
+  });
+  return counts;
+};
+
 // ─── Smart Matching (optimised — no full-table scan) ──────────────────────────
 export const notifyMatchingCandidatesForJob = async (job) => {
   if (!job?.job_type || !job?.id) return;
