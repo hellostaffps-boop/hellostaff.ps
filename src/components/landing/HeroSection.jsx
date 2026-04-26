@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import { useQuery } from "@tanstack/react-query";
 import { getPlatformStats } from "@/lib/supabaseService";
+import { IS_DEMO, DEMO_STATS } from "@/lib/demoData";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
