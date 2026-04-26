@@ -1,4 +1,6 @@
-export const IS_DEMO = typeof window !== "undefined" && localStorage.getItem("demo_mode") === "true";
+// SECURITY FIX (2026-04-27): Removed localStorage-based demo mode
+// Demo mode is now explicitly disabled. Use admin dashboard for demo data.
+export const IS_DEMO = false;
 
 export const DEMO_STATS = {
   jobs: 240,

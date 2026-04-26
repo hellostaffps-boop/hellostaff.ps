@@ -12,6 +12,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // SECURITY FIX (2026-04-27): Only allow a pre-configured super admin email to bootstrap
+    const SUPER_ADMIN_EMAIL = Deno.env.get('SUPER_ADMIN_EMAIL');
+    if (SUPER_ADMIN_EMAIL && user.email !== SUPER_ADMIN_EMAIL) {
+      return Response.json(
+        { error: 'Forbidden: Only the super admin can bootstrap admin access' },
+        { status: 403 }
+      );
+    }
+
     // Check if already admin
     if (user.role === 'platform_admin') {
       return Response.json({

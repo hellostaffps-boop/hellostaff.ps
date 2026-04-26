@@ -19,8 +19,13 @@ export const getNotifications = async (userEmail) => {
   return data || [];
 };
 
-export const markNotificationRead = async (notifId) => {
-  const { error } = await supabase.from("notifications").update({ read: true }).eq("id", notifId);
+export const markNotificationRead = async (userEmail, notifId) => {
+  if (!userEmail || !notifId) throw new Error("Missing userEmail or notifId");
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("id", notifId)
+    .eq("user_email", userEmail);
   if (error) throw error;
 };
 
@@ -38,8 +43,13 @@ export const getUnreadNotificationsCount = async (userEmail) => {
   return count || 0;
 };
 
-export const deleteNotification = async (notifId) => {
-  const { error } = await supabase.from("notifications").delete().eq("id", notifId);
+export const deleteNotification = async (userEmail, notifId) => {
+  if (!userEmail || !notifId) throw new Error("Missing userEmail or notifId");
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("id", notifId)
+    .eq("user_email", userEmail);
   if (error) throw error;
 };
 

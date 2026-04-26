@@ -65,7 +65,7 @@ export default function Contact() {
               </div>
               <div>
                 <div className="font-medium text-sm">{t("contact", "emailLabel")}</div>
-                <div className="text-sm text-muted-foreground">hello@hellostaff.ps</div>
+                <div className="text-sm text-muted-foreground">hello@staffps.com</div>
               </div>
             </div>
             <div className="flex items-start gap-4">

@@ -82,9 +82,13 @@ export const createApplicationForCurrentCandidate = async (userEmail, jobId, dat
   }, 5000); // 5-second cooldown
 };
 
-export const createApplication = async (data) => {
+export const createApplication = async (userEmail, data) => {
+  if (!userEmail) throw new Error("Missing userEmail");
   const { data: app, error } = await supabase
-    .from("applications").insert({ ...data, status: "pending" }).select().single();
+    .from("applications")
+    .insert({ ...data, candidate_email: userEmail, status: "pending" })
+    .select()
+    .single();
   if (error) throw error;
   return app;
 };
@@ -129,11 +133,33 @@ export const updateApplicationStatus = async (userEmail, applicationId, newStatu
   } catch (_) {}
 };
 
-export const updateApplication = async (appId, data) => {
+export const updateApplication = async (userEmail, appId, data) => {
+  if (!userEmail || !appId) throw new Error("Missing userEmail or appId");
+  
+  // Verify ownership: candidate OR employer of the org
+  const { data: app, error: appErr } = await supabase
+    .from("applications")
+    .select("candidate_email, organization_id")
+    .eq("id", appId)
+    .single();
+  if (appErr || !app) throw new Error("Application not found");
+  
+  const isCandidate = app.candidate_email === userEmail;
+  const { data: empProfile } = await supabase
+    .from("employer_profiles")
+    .select("organization_id")
+    .eq("user_email", userEmail)
+    .single();
+  const isEmployer = empProfile?.organization_id === app.organization_id;
+  
+  if (!isCandidate && !isEmployer) throw new Error("FORBIDDEN");
+  
   const { data: updated, error } = await supabase
     .from("applications")
     .update({ ...data, updated_at: new Date().toISOString() })
-    .eq("id", appId).select().single();
+    .eq("id", appId)
+    .select()
+    .single();
   if (error) throw error;
   return updated;
 };
@@ -212,7 +238,17 @@ export const subscribeToApplicationMessages = (applicationId, callback) => {
   return () => supabase.removeChannel(channel);
 };
 
-export const sendApplicationMessage = async (applicationId, { sender_uid, sender_name, sender_role, message }) => {
+export const sendApplicationMessage = async (applicationId, { message, sender_role }) => {
+  if (!applicationId || !message) throw new Error("Missing applicationId or message");
+  
+  // Get current user from auth
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) throw new Error("Authentication required");
+  
+  const sender_uid = user.id;
+  const sender_email = user.email;
+  const sender_name = user.user_metadata?.full_name || sender_email;
+  
   const { data, error } = await supabase.from("application_messages").insert({
     application_id: applicationId,
     sender_email: sender_uid,
@@ -234,12 +270,26 @@ export const getApplicationInternalNotes = async (applicationId) => {
   return data || [];
 };
 
-export const createApplicationInternalNote = async (applicationId, organizationId, { author_email, author_name, body }) => {
+export const createApplicationInternalNote = async (applicationId, organizationId, { body }) => {
+  // Get current user from auth (prevent spoofing)
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) throw new Error("Authentication required");
+  
+  // Verify employer belongs to this org
+  const { data: empProfile } = await supabase
+    .from("employer_profiles")
+    .select("organization_id")
+    .eq("user_email", user.email)
+    .single();
+  if (empProfile?.organization_id !== organizationId) {
+    throw new Error("FORBIDDEN");
+  }
+  
   const { data, error } = await supabase.from("application_notes").insert({
     application_id: applicationId,
     organization_id: organizationId,
-    author_email,
-    author_name,
+    author_email: user.email,
+    author_name: user.user_metadata?.full_name || user.email,
     body,
     visibility: "internal",
   }).select().single();
@@ -248,6 +298,32 @@ export const createApplicationInternalNote = async (applicationId, organizationI
 };
 
 export const updateApplicationInternalNote = async (noteId, { body }) => {
+  if (!noteId) throw new Error("Missing noteId");
+  
+  // Get current user
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) throw new Error("Authentication required");
+  
+  // Verify ownership of the note
+  const { data: note, error: noteErr } = await supabase
+    .from("application_notes")
+    .select("author_email, organization_id")
+    .eq("id", noteId)
+    .single();
+  if (noteErr || !note) throw new Error("Note not found");
+  
+  // Verify user is the author OR belongs to the same org
+  const { data: empProfile } = await supabase
+    .from("employer_profiles")
+    .select("organization_id")
+    .eq("user_email", user.email)
+    .single();
+  
+  const isAuthor = note.author_email === user.email;
+  const isOrgMember = empProfile?.organization_id === note.organization_id;
+  
+  if (!isAuthor && !isOrgMember) throw new Error("FORBIDDEN");
+  
   const { data, error } = await supabase
     .from("application_notes")
     .update({ body, updated_at: new Date().toISOString() })

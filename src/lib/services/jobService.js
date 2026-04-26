@@ -124,7 +124,15 @@ export const updateJobForOwnedOrganization = async (userEmail, jobId, data) => {
   return updated;
 };
 
-export const updateJob = async (jobId, data) => {
+export const updateJob = async (userEmail, jobId, data) => {
+  if (!userEmail || !jobId) throw new Error("Missing userEmail or jobId");
+  const profile = await getEmployerProfile(userEmail);
+  if (!profile?.organization_id) throw new Error("No organization for this employer");
+
+  const job = await getJob(jobId);
+  if (!job) throw new Error("Job not found");
+  if (job.organization_id !== profile.organization_id) throw new Error("FORBIDDEN");
+
   const { data: updated, error } = await supabase
     .from("jobs").update({ ...data, updated_at: new Date().toISOString() })
     .eq("id", jobId).select().single();
@@ -132,7 +140,15 @@ export const updateJob = async (jobId, data) => {
   return updated;
 };
 
-export const deleteJob = async (jobId) => {
+export const deleteJob = async (userEmail, jobId) => {
+  if (!userEmail || !jobId) throw new Error("Missing userEmail or jobId");
+  const profile = await getEmployerProfile(userEmail);
+  if (!profile?.organization_id) throw new Error("No organization for this employer");
+
+  const job = await getJob(jobId);
+  if (!job) throw new Error("Job not found");
+  if (job.organization_id !== profile.organization_id) throw new Error("FORBIDDEN");
+
   const { error } = await supabase.from("jobs").delete().eq("id", jobId);
   if (error) throw error;
 };
