@@ -1,4 +1,4 @@
-export default function PageHeader({ title, description, children }) {
+export default function PageHeader({ title, description, children = null }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start lg:items-center justify-between gap-4 mb-8">
       <div className="flex-1">
