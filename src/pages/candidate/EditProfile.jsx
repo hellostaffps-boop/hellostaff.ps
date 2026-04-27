@@ -418,42 +418,6 @@ export default function EditProfile() {
           )}
         </div>
 
-        {/* Job Preferences */}
-        <div className={sectionClass}>
-          <h3 className="font-semibold text-sm">{t("editProfile", "jobPreferences") || "Job Preferences"}</h3>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm">{t("editProfile", "yearsExp")}</Label>
-              <Input type="number" placeholder="0" value={form.years_experience}
-                onChange={(e) => setForm({ ...form, years_experience: e.target.value })} className="mt-1.5" />
-            </div>
-            <div>
-              <Label className="text-sm">{t("editProfile", "availability")}</Label>
-              <Select value={form.availability} onValueChange={(v) => setForm({ ...form, availability: v })}>
-                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full_time">{t("editProfile", "fullTime")}</SelectItem>
-                  <SelectItem value="part_time">{t("editProfile", "partTime")}</SelectItem>
-                  <SelectItem value="flexible">{t("editProfile", "flexible")}</SelectItem>
-                  <SelectItem value="weekends_only">{t("editProfile", "weekendsOnly")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div>
-            <Label className="text-sm mb-3 block">{t("editProfile", "jobCategories")}</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {jobTypeOptions.map((jt) => (
-                <label key={jt.value} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox checked={form.preferred_roles.includes(jt.value)}
-                    onCheckedChange={() => toggleRole(jt.value)} />
-                  <span className="text-sm">{jt.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-
         {/* Actions */}
         <div className="flex gap-3 pb-8">
           <Button onClick={handleSave} disabled={saving} className="gap-2">

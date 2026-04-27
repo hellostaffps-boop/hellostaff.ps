@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 
 export default function Store() {
   const { lang, t } = useLanguage();
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
   const isAr = lang === "ar";
   
   const [filterCategory, setFilterCategory] = useState("all");
@@ -33,7 +33,7 @@ export default function Store() {
 
   const { data: userOrders = [] } = useQuery({
     queryKey: ["user-orders", userProfile?.email],
-    queryFn: () => getUserOrders(userProfile.email),
+    queryFn: () => getUserOrders(userProfile?.email),
     enabled: !!userProfile?.email,
   });
 

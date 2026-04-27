@@ -26,7 +26,7 @@ const staggerContainer = {
 
 export default function HeroSection() {
   const { t } = useLanguage();
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
   const role = userProfile?.role;
   const isEmployer = role === "employer_owner" || role === "employer_manager";
   const isCandidate = role === "candidate";
