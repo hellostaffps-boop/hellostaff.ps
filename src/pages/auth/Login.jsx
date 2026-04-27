@@ -17,6 +17,7 @@ function getAuthErrorMessage(message, t) {
   if (m.includes("user not found") || m.includes("no user")) return t("authErrors", "userNotFound");
   if (m.includes("too many")) return t("authErrors", "tooManyRequests");
   if (m.includes("invalid email")) return t("authErrors", "invalidEmail");
+  if (m.includes("email not confirmed") || m.includes("email_not_confirmed")) return "لم يتم تأكيد البريد الإلكتروني. يرجى التحقق من بريدك والضغط على رابط التأكيد.";
   return t("authErrors", "generic");
 }
 
