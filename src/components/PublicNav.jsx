@@ -21,7 +21,16 @@ export default function PublicNav() {
   const isCandidate = role === "candidate";
   const isAdmin = role === "platform_admin";
   const isLoggedIn = !!user;
-  const dashboardPath = isAdmin ? "/admin/dashboard" : isEmployer ? "/employer" : isCandidate ? "/candidate" : "/";
+  const hasRole = isAdmin || isEmployer || isCandidate;
+  const dashboardPath = isAdmin 
+    ? "/admin/dashboard" 
+    : isEmployer 
+    ? "/employer" 
+    : isCandidate 
+    ? "/candidate" 
+    : isLoggedIn 
+    ? "/auth/complete-profile" 
+    : "/";
 
   // Notification count for logged-in users
   const [unreadCount, setUnreadCount] = useState(0);

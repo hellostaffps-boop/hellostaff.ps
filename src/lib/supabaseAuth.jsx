@@ -319,9 +319,11 @@ export function SupabaseAuthProvider({ children }) {
     <SupabaseAuthContext.Provider
       value={{
         user,
+        setUser,
         userProfile,
         loading,
         needsRoleSetup,
+        setNeedsRoleSetup,
         signInEmail,
         signUpEmail,
         signInWithGoogle,

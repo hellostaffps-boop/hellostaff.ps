@@ -73,15 +73,28 @@ export default function HeroSection() {
           </motion.p>
 
           <motion.div variants={fadeUp} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            {!isEmployer && (
-              <Link to={isCandidate ? "/candidate" : "/auth/signup?role=candidate"}>
+            {/* Logged in but no role selected yet */}
+            {user && !role && (
+              <Link to="/auth/complete-profile">
                 <Button size="lg" className="h-14 px-8 text-base gap-2 rounded-xl transition-transform hover:scale-105 active:scale-95 shadow-xl shadow-accent/20">
-                  {isCandidate ? t("nav", "dashboard") || "لوحة التحكم" : t("hero", "findJob")}
+                  أكمل ملفك الشخصي
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
             )}
-            {!isCandidate && (
+            
+            {/* Not logged in OR candidate — show find job button */}
+            {(!user || !isEmployer) && (
+              <Link to={isCandidate ? "/candidate" : "/auth/signup?role=candidate"}>
+                <Button size="lg" className="h-14 px-8 text-base gap-2 rounded-xl transition-transform hover:scale-105 active:scale-95 shadow-xl shadow-accent/20">
+                  {isCandidate ? (t("nav", "dashboard") || "لوحة التحكم") : t("hero", "findJob")}
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            )}
+            
+            {/* Not logged in OR employer — show employer button */}
+            {(!user || !isCandidate) && (
               <Link to={isEmployer ? "/employer" : "/auth/signup?role=employer_owner"}>
                 <Button size="lg" variant="outline" className="h-14 px-8 text-base border-2 rounded-xl transition-transform hover:scale-105 active:scale-95">
                   {isEmployer ? (t("nav", "dashboard") || "لوحة التحكم") : t("hero", "employer")}
